@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Whether a customer's call was answered (vendor app only, merged over
+         src/main for this flavour — the customer and salesman apps never ask
+         for this). READ_PHONE_STATE: hear an incoming call ring, get picked
+         up and end. Only the times are used, never the caller's number
+         (Android does not give it to an app without the call-log
+         permission, and this does not ask for that). Optional — without it
+         calls just show their approximate length. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+
+    <application>
+        <!-- PHONE_STATE is a protected system broadcast; exported is required
+             to receive it, and only the system can send it. -->
+        <receiver
+            android:name=".IncomingCallReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE"/>
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
