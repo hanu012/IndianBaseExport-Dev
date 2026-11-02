@@ -39,7 +39,7 @@ class SystemSettingsPage extends SettingsPage
 
     protected static function sections(): array
     {
-        return ['payments', 'sign-in', 'error-log', 'maps'];
+        return ['payments', 'sign-in', 'error-log', 'maps', 'branding'];
     }
 
     public static function canAccess(): bool

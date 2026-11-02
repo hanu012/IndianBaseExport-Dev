@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\PreferenceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RazorpayWebhookController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FeedController;
+use App\Http\Controllers\Api\VendorPromotionController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\PasswordResetRequestController;
 use App\Http\Controllers\Api\PlaceController;
@@ -179,6 +181,36 @@ Route::middleware(['auth:sanctum', 'role:vendor'])->group(function () {
     // was answered, and the talk time (CallOutcomeMatcher).
     Route::post('/vendors/me/calls', [VendorLeadController::class, 'reportCalls'])
         ->middleware('throttle:leads');
+
+    // Paid promotions (decided 2026-10-31) — buy one (Idempotency-Key, paid
+    // like a subscription), list them with their numbers, see one, edit its
+    // post, pause / resume, end early, extend, withdraw an unpaid one.
+    Route::get('/vendors/me/promotions/options', [VendorPromotionController::class, 'options']);
+    Route::get('/vendors/me/promotions', [VendorPromotionController::class, 'index']);
+    Route::post('/vendors/me/promotions', [VendorPromotionController::class, 'store'])
+        ->middleware('throttle:subscribe');
+    Route::get('/vendors/me/promotions/{promotion}', [VendorPromotionController::class, 'show'])
+        ->whereNumber('promotion');
+    Route::post('/vendors/me/promotions/{promotion}/post', [VendorPromotionController::class, 'updatePost'])
+        ->whereNumber('promotion');
+    Route::post('/vendors/me/promotions/{promotion}/pause', [VendorPromotionController::class, 'pause'])
+        ->whereNumber('promotion');
+    Route::post('/vendors/me/promotions/{promotion}/resume', [VendorPromotionController::class, 'resume'])
+        ->whereNumber('promotion');
+    Route::post('/vendors/me/promotions/{promotion}/end', [VendorPromotionController::class, 'end'])
+        ->whereNumber('promotion');
+    Route::post('/vendors/me/promotions/{promotion}/extend', [VendorPromotionController::class, 'extend'])
+        ->whereNumber('promotion')
+        ->middleware('throttle:subscribe');
+    Route::delete('/vendors/me/promotions/{promotion}', [VendorPromotionController::class, 'destroy'])
+        ->whereNumber('promotion');
+
+    // Customers' comments on this vendor's Feed posts, and replying as the
+    // business (shown with a "Business" tag in the customer app).
+    Route::get('/vendors/me/feed-comments', [FeedController::class, 'vendorComments']);
+    Route::post('/vendors/me/feed-comments/{comment}/reply', [FeedController::class, 'vendorReply'])
+        ->whereNumber('comment')
+        ->middleware('throttle:reviews');
 });
 
 // A customer's own record (SPEC section 4.2, task 4.6) — location
@@ -244,6 +276,27 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     // see ReportController's own docblock. Not the full Support Tickets
     // module (Phase 6).
     Route::post('/vendors/{vendor}/report', [ReportController::class, 'store'])
+        ->middleware('throttle:reports');
+
+    // The Feed tab (decided 2026-10-31): paid promotions for the customer's
+    // zone first, then vendors' portfolio posts; likes and comments on
+    // both. A post is {type}/{id} — `promotion` or `post`.
+    Route::get('/feed', [FeedController::class, 'index']);
+    Route::post('/feed/{type}/{id}/like', [FeedController::class, 'like'])
+        ->whereIn('type', ['promotion', 'post'])->whereNumber('id')
+        ->middleware('throttle:favorites');
+    Route::get('/feed/{type}/{id}/comments', [FeedController::class, 'comments'])
+        ->whereIn('type', ['promotion', 'post'])->whereNumber('id');
+    Route::post('/feed/{type}/{id}/comments', [FeedController::class, 'storeComment'])
+        ->whereIn('type', ['promotion', 'post'])->whereNumber('id')
+        ->middleware('throttle:reviews');
+    Route::delete('/feed/comments/{comment}', [FeedController::class, 'destroyComment'])
+        ->whereNumber('comment');
+    Route::post('/feed/comments/{comment}/like', [FeedController::class, 'likeComment'])
+        ->whereNumber('comment')
+        ->middleware('throttle:favorites');
+    Route::post('/feed/comments/{comment}/report', [FeedController::class, 'reportComment'])
+        ->whereNumber('comment')
         ->middleware('throttle:reports');
 });
 

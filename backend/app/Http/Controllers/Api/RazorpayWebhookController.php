@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Payment;
 use App\Services\Payments\RazorpayClient;
+use App\Services\PromotionService;
 use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class RazorpayWebhookController extends Controller
     public function __construct(
         private readonly RazorpayClient $razorpay,
         private readonly SubscriptionService $subscriptions,
+        private readonly PromotionService $promotions,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -63,15 +65,19 @@ class RazorpayWebhookController extends Controller
             return ApiResponse::success(['handled' => false]);
         }
 
+        // A payment belongs to a subscription or a paid promotion; each has
+        // its own activation rules.
+        $handler = $payment->promotion_id !== null ? $this->promotions : $this->subscriptions;
+
         if ($event === 'payment_link.paid') {
             $gatewayPaymentId = $request->input('payload.payment.entity.id');
 
-            $this->subscriptions->completeOnlinePayment(
+            $handler->completeOnlinePayment(
                 $payment,
                 is_string($gatewayPaymentId) ? $gatewayPaymentId : null,
             );
         } else {
-            $this->subscriptions->failOnlinePayment($payment);
+            $handler->failOnlinePayment($payment);
         }
 
         return ApiResponse::success(['handled' => true]);

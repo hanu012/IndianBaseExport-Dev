@@ -88,6 +88,7 @@ class UserResource extends Resource
 
                     TextInput::make('email')
                         ->email()
+                        ->rule(new \App\Rules\EmailDomainExists)
                         ->required()
                         ->maxLength(255)
                         // Deliberately NOT scoped withoutTrashed(): the unique
@@ -516,6 +517,8 @@ class UserResource extends Resource
                         ? $record->approval_note
                         : null),
 
+                \App\Filament\Support\InviteStatusColumn::make(),
+
                 TextColumn::make('created_at')
                     ->label('Added on')
                     ->dateTime('d M Y, H:i')
@@ -728,7 +731,8 @@ class UserResource extends Resource
      */
     public static function infolist(Infolist $infolist): Infolist
     {
-        $money = fn (?int $paise): string => Number::currency(($paise ?? 0) / 100, 'INR');
+        // Filament injects closure arguments by name — it must be $state.
+        $money = fn (?int $state): string => Number::currency(($state ?? 0) / 100, 'INR');
 
         return $infolist->schema([
             RecordView::section('Basic details')

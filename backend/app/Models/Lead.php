@@ -28,6 +28,8 @@ class Lead extends Model
         'vendor_id',
         'subcategory_id',
         'zone_id',
+        // Set when the contact started from a paid promotion in the Feed.
+        'promotion_id',
         'channel',
         'review_requested_at',
     ];

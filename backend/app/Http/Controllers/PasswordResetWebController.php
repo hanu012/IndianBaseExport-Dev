@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\AuthProvider;
 use App\Services\Firebase\FirebaseAuthClient;
+use App\Services\PasswordResetService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,11 @@ class PasswordResetWebController extends Controller
         $firstTime = false;
         $appLink = null;
 
-        $status = Password::broker()->reset(
+        // A "set your password" invite lasts 7 days, a reset 15 minutes —
+        // check the token against the broker that issued it.
+        $broker = PasswordResetService::brokerFor(User::query()->where('email', $data['email'])->first());
+
+        $status = Password::broker($broker)->reset(
             $data,
             function (User $user, string $password) use ($auth, &$firstTime, &$appLink) {
                 // Read before the reset clears it.

@@ -19,6 +19,9 @@ class LeadsOverTimeChart extends ChartWidget
 {
     protected static ?string $heading = 'Leads over time';
 
+    /** Full width wherever it is shown (dashboard and Leads analytics). */
+    protected int|string|array $columnSpan = 'full';
+
     protected function getType(): string
     {
         return 'line';

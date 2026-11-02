@@ -31,9 +31,10 @@ class _FakeCallDataSource extends DataSource {
   @override
   Future<CommonResponse?> createLeadAPI({
     required int vendorId,
-    required int subcategoryId,
+    int? subcategoryId,
     int? zoneId,
     required String channel,
+    int? promotionId,
   }) async {
     return CommonResponse.fromJson({
       'success': true,

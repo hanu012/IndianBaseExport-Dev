@@ -21,6 +21,13 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="EMAIL_DOMAIN_CHECK" value="false"/>
+        <!-- Never the developer's real Firebase project: tests that need
+             Firebase set a fake one up themselves. -->
+        <env name="FCM_PROJECT_ID" value=""/>
+        <env name="FCM_CLIENT_EMAIL" value=""/>
+        <env name="FCM_PRIVATE_KEY_BASE64" value=""/>
+        <env name="FIREBASE_WEB_API_KEY" value=""/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <!--

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Service Marketplace — Product Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  :root { --teal: #0F766E; --teal-bg: #E6F4F2; --ink: #101828; --muted: #5B6475; --line: #E4E7EC; --soft: #F6F7F9; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 6px; color: var(--teal); letter-spacing: -0.5px; }
+  h2 { font-size: 16pt; color: var(--teal); margin: 0 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--teal); page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 16px 0 6px; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; color: var(--teal); page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 18px; }
+  li { margin: 2px 0; }
+  .section { page-break-before: always; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.4pt; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { background: var(--teal); color: #fff; text-align: left; padding: 6px 8px; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: var(--soft); }
+  .box { background: var(--teal-bg); border-left: 4px solid var(--teal); padding: 9px 12px; margin: 8px 0 12px; border-radius: 4px; page-break-inside: avoid; }
+  .warn { background: #FEF3E7; border-left-color: #DC6803; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; page-break-inside: avoid; }
+  .card b { color: var(--teal); }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 6px 0 12px; }
+  .step { background: #fff; border: 1.5px solid var(--teal); border-radius: 6px; padding: 4px 8px; font-size: 9pt; font-weight: 600; }
+  .arrow { color: var(--teal); font-weight: 700; }
+  .tag { display: inline-block; background: var(--teal-bg); color: var(--teal); border-radius: 10px; padding: 0 7px; font-size: 8.5pt; font-weight: 600; }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover .band { background: linear-gradient(135deg, #0E8F83, #0F766E 55%, #134E4A); color: #fff; padding: 34px 30px; border-radius: 14px; }
+  .cover .band h1 { color: #fff; font-size: 30pt; }
+  .cover .band p { color: rgba(255,255,255,.9); font-size: 12pt; margin: 0; }
+  .toc li { margin: 4px 0; }
+  code { font-family: Consolas, monospace; font-size: 8.8pt; background: var(--soft); padding: 0 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<div class="cover">
+  <div class="band">
+    <h1>Service Marketplace</h1>
+    <p>Product guide — how the apps and the admin panel work</p>
+  </div>
+  <div style="margin-top:26px">
+    <p><b>What's inside:</b> an overview of the platform, the main journeys from start to finish, every screen in the customer, vendor and salesman apps, every screen in the admin and super-admin panels, and the business rules that tie them together.</p>
+    <p class="muted">Version of 31 October 2026 · Describes the system as built in the <code>baseExperts-main</code> project.</p>
+  </div>
+  <div style="margin-top:20px">
+    <h3>Contents</h3>
+    <ol class="toc">
+      <li>The platform at a glance</li>
+      <li>How it works — the main journeys</li>
+      <li>Customer app</li>
+      <li>Vendor app</li>
+      <li>Salesman app</li>
+      <li>Admin panel (<code>/admin</code>)</li>
+      <li>Super-admin panel (<code>/super-admin</code>)</li>
+      <li>Key rules and concepts</li>
+      <li>Behind the scenes — technology and setup</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============================ 1. OVERVIEW ============================ -->
+<div class="section">
+  <h2>1. The platform at a glance</h2>
+  <p>Service Marketplace connects <b>local service vendors</b> — AC repair, plumbing, electrical work, cleaning, packers &amp; movers and more — with <b>customers</b> who need them. Vendors pay a yearly <b>subscription</b> to be listed in the areas and services they choose. Customers browse for free and contact vendors directly by phone call or WhatsApp.</p>
+  <p>Vendors join mainly through <b>salesmen</b>, who visit businesses, sign them up and collect payment; vendors can also sign up themselves. An <b>admin team</b> manages the catalogue, approves accounts and documents, checks payments and moderates content.</p>
+
+  <h3>Who uses it</h3>
+  <table>
+    <tr><th style="width:18%">Role</th><th style="width:22%">Uses</th><th>What they do</th></tr>
+    <tr><td><b>Customer</b></td><td>Customer app</td><td>Finds vendors by service and area, calls or WhatsApps them, saves favourites, writes reviews, browses the Feed of offers and work photos.</td></tr>
+    <tr><td><b>Vendor</b></td><td>Vendor app</td><td>Subscribes to a plan, picks services and areas, uploads KYC documents and work photos/videos, sees leads (calls), replies to reviews, buys paid promotions.</td></tr>
+    <tr><td><b>Salesman</b></td><td>Salesman app</td><td>Adds vendors in the field, uploads their documents, sells them a plan (cash or payment link), tracks their vendors and commission.</td></tr>
+    <tr><td><b>Admin</b></td><td>Admin panel <code>/admin</code></td><td>Daily operations: catalogue, zones, plans, users, approvals, KYC checks, reviews, reports, banners, promotions.</td></tr>
+    <tr><td><b>Super-admin</b></td><td>Super-admin panel <code>/super-admin</code></td><td>Admin accounts and permissions, system settings (keys, sign-in, payments), activity log, error log, system health.</td></tr>
+  </table>
+
+  <h3>The five parts</h3>
+  <div class="grid">
+    <div class="card"><b>Customer app</b><br>Android app (Flutter). Light, teal design. Tabs: Home · Feed · Favourites · Profile.</div>
+    <div class="card"><b>Vendor app</b><br>Same codebase, vendor build. Tabs: Overview · Services · Portfolio · Reviews · Profile.</div>
+    <div class="card"><b>Salesman app</b><br>Same codebase, salesman build. Home with vendor counts and earnings; add-vendor flow.</div>
+    <div class="card"><b>Admin &amp; super-admin panels</b><br>Web panels (Laravel + Filament), dark theme, same login.</div>
+    <div class="card" style="grid-column: span 2"><b>Server (API)</b><br>Laravel 12 with a MySQL/MariaDB database. All three apps talk to it; it owns every rule — prices, quotas, dates and permissions are always worked out on the server, never trusted from an app.</div>
+  </div>
+</div>
+
+<!-- ============================ 2. JOURNEYS ============================ -->
+<div class="section">
+  <h2>2. How it works — the main journeys</h2>
+
+  <h3>2.1 A salesman signs up a vendor (main channel)</h3>
+  <div class="flow"><span class="step">Add vendor details</span><span class="arrow">→</span><span class="step">Upload KYC documents</span><span class="arrow">→</span><span class="step">Choose plan, services, areas</span><span class="arrow">→</span><span class="step">Take payment</span><span class="arrow">→</span><span class="step">Admin verifies KYC</span><span class="arrow">→</span><span class="step">Vendor live</span></div>
+  <ol>
+    <li>The salesman enters the business (name, owner, phone, address, GPS location, shop photo) in the salesman app.</li>
+    <li>They upload the vendor's <b>KYC documents</b> (for example Aadhaar and PAN — the admin decides which are compulsory).</li>
+    <li>They pick a <b>plan</b> (Silver / Gold / Platinum), then the <b>categories, services and zones</b> within the plan's limits.</li>
+    <li>Payment: <b>cash</b> (the salesman collects it; an admin later confirms it in Cash Reconciliation) or an <b>online payment link</b> sent by SMS (Razorpay). A free trial can also be granted.</li>
+    <li>The vendor is emailed a <b>"set your password"</b> link to sign in to the vendor app.</li>
+    <li>The vendor becomes visible to customers once the subscription is paid <b>and</b> an admin has verified every compulsory KYC document and approved the account.</li>
+    <li>The salesman earns a <b>commission</b> on the sale, which the admin pays out from Commission &amp; Payouts.</li>
+  </ol>
+
+  <h3>2.2 A vendor signs up by themselves</h3>
+  <div class="flow"><span class="step">Register (name, email, phone)</span><span class="arrow">→</span><span class="step">Set password from email link</span><span class="arrow">→</span><span class="step">Upload KYC</span><span class="arrow">→</span><span class="step">Admin approves</span><span class="arrow">→</span><span class="step">Choose plan &amp; pay</span><span class="arrow">→</span><span class="step">Live</span></div>
+  <p>Registration does not ask for a password: the app shows "Check your email", and the account's first password is set from the emailed link. Until an admin approves the account the app shows <b>"Your account is in verification"</b>.</p>
+
+  <h3>2.3 A customer finds and contacts a vendor</h3>
+  <div class="flow"><span class="step">Choose area</span><span class="arrow">→</span><span class="step">Pick a service</span><span class="arrow">→</span><span class="step">See matching vendors</span><span class="arrow">→</span><span class="step">Vendor page</span><span class="arrow">→</span><span class="step">Call / WhatsApp</span><span class="arrow">→</span><span class="step">Review</span></div>
+  <ol>
+    <li>The customer sets their location: by <b>picking an area from a list</b> (default) or, if the admin turns it on, <b>on a map / GPS / place search</b>.</li>
+    <li>The server works out the customer's <b>zone</b> and lists vendors whose live subscription covers that zone and the chosen service.</li>
+    <li>Results are ordered by <b>plan tier first</b> (Platinum before Gold before Silver), then by the sort the customer chooses (nearest, top rated, newest).</li>
+    <li>Tapping <b>Call</b> or <b>WhatsApp</b> records a <b>lead</b> for the vendor (they get a push notification), then opens the dialer or WhatsApp.</li>
+    <li>A customer who contacted a vendor in the last 30 days can leave <b>one review per contact</b>; the vendor can reply.</li>
+  </ol>
+
+  <h3>2.4 Paid promotions and the Feed</h3>
+  <div class="flow"><span class="step">Admin creates packages</span><span class="arrow">→</span><span class="step">Vendor buys one</span><span class="arrow">→</span><span class="step">Photo/video + caption + areas</span><span class="arrow">→</span><span class="step">Pay</span><span class="arrow">→</span><span class="step">Top of customers' Feed</span></div>
+  <p>The customer app's <b>Feed</b> shows, for the customer's area: first the <b>live paid promotions</b> targeting that area (marked "Sponsored", with Call / WhatsApp / View profile buttons), then the <b>work photos and videos</b> of vendors serving that area. Customers can like and comment on any post. Promotions go live on payment without review; an admin can hide one at any time.</p>
+
+  <h3>2.5 Renewals and expiry</h3>
+  <p>Every night the server checks subscriptions. A subscription past its end date enters a short <b>grace period</b> (still visible, with reminders), then <b>expires</b> and the vendor drops out of search. Vendors get reminders 15, 7 and 1 day before expiry and can renew from the app.</p>
+</div>
+
+<!-- ============================ 3. CUSTOMER APP ============================ -->
+<div class="section">
+  <h2>3. Customer app</h2>
+  <p>Bottom tabs: <span class="tag">Home</span> <span class="tag">Feed</span> <span class="tag">Favourites</span> <span class="tag">Profile</span>. Available in English, Hindi and Gujarati.</p>
+
+  <h3>Getting in</h3>
+  <table>
+    <tr><th style="width:28%">Screen</th><th>What it does</th></tr>
+    <tr><td>Splash</td><td>Decides where to go: login, home, or an account gate (password change, verification).</td></tr>
+    <tr><td>Login · Create account · Forgot password</td><td>Email + password only (no OTP). Sign-up emails a "set your password" link; forgot-password emails a reset link.</td></tr>
+    <tr><td>Check your email</td><td>Shown after registering, until the password link is used.</td></tr>
+  </table>
+
+  <h3>Home</h3>
+  <ul>
+    <li><b>Your location</b> pill — the chosen area or address; tap to change it.</li>
+    <li><b>Search</b> across all services.</li>
+    <li><b>Categories</b> grid → category screen with its services and how many vendors offer each in your area.</li>
+    <li><b>Popular services</b> rail (admin-flagged services first).</li>
+    <li><b>Vendors near you</b> — every vendor serving your area.</li>
+  </ul>
+
+  <h3>Finding vendors</h3>
+  <table>
+    <tr><th style="width:28%">Screen</th><th>What it does</th></tr>
+    <tr><td>Service search</td><td>Search all services by name.</td></tr>
+    <tr><td>Vendor list</td><td>Vendors for one service in your area, with sort chips (Nearest · Top rated · Newest), rating, distance, services, favourite heart.</td></tr>
+    <tr><td>Vendor page</td><td>Shop photo, business and owner name, rating, address with "Open in Maps", areas served, services, work gallery (photos/videos filtered by service), reviews, Call and WhatsApp buttons, favourite, share, report vendor. "Write a review" appears only after you have contacted the vendor.</td></tr>
+  </table>
+
+  <h3>Feed</h3>
+  <p>Sponsored posts for your area first, then vendors' work photos and videos. Like, comment (and delete your own or report someone else's), Call / WhatsApp from sponsored posts, View profile, tap media to view full screen.</p>
+
+  <h3>Choosing a location</h3>
+  <table>
+    <tr><th style="width:28%">Mode</th><th>How it works</th></tr>
+    <tr><td>Zone list (default)</td><td>Pick a main area, then a sub-area. GPS, place search and saved addresses are hidden.</td></tr>
+    <tr><td>Map (admin switch)</td><td>"Use current location", search a place, or pick on a map; confirm the address; save addresses (Home, Work…) under Profile → My addresses.</td></tr>
+  </table>
+
+  <h3>Profile</h3>
+  <ul>
+    <li>Personal details — name, email (changing it needs your password), phone, profile photo.</li>
+    <li>Select your area / My addresses · My calls (call history with approximate durations) · My reviews · Favourites.</li>
+    <li>Change password · Language · Notifications · Help · Log out · Delete account.</li>
+  </ul>
+</div>
+
+<!-- ============================ 4. VENDOR APP ============================ -->
+<div class="section">
+  <h2>4. Vendor app</h2>
+  <p>Bottom tabs: <span class="tag">Overview</span> <span class="tag">Services</span> <span class="tag">Portfolio</span> <span class="tag">Reviews</span> <span class="tag">Profile</span>.</p>
+
+  <h3>Before the dashboard</h3>
+  <table>
+    <tr><th style="width:28%">Screen</th><th>What it does</th></tr>
+    <tr><td>Register / Login</td><td>Self sign-up (password set from the emailed link) or login.</td></tr>
+    <tr><td>Account in verification</td><td>Shown until an admin approves the account; lists the KYC documents still needed. Updates live when the admin decides.</td></tr>
+    <tr><td>KYC documents</td><td>Upload each document type (front/back, number, expiry where needed). Status per document: Pending upload → Uploaded → In verification → Verified, or "Re-upload" with the admin's reason.</td></tr>
+    <tr><td>Select plan → services → zones</td><td>Choose Silver / Gold / Platinum, then categories, services and areas within the plan's limits.</td></tr>
+    <tr><td>Waiting for payment</td><td>Shown while an online payment link is unpaid; "Check again" and "Choose a different plan".</td></tr>
+  </table>
+
+  <h3>Overview tab</h3>
+  <ul>
+    <li>Current plan, days left, renew button.</li>
+    <li>Documents notice if anything needs attention.</li>
+    <li><b>Recent calls</b> — calls today, average call length; answered / not answered when the phone permission allows it.</li>
+    <li>Usage of the plan: categories, services, zones, photos, videos used vs allowed.</li>
+  </ul>
+
+  <h3>Other tabs</h3>
+  <table>
+    <tr><th style="width:28%">Tab / screen</th><th>What it does</th></tr>
+    <tr><td>Services</td><td>Categories, services and zones on the plan; add more within the remaining quota (or buy add-ons).</td></tr>
+    <tr><td>Portfolio</td><td>Category → service → gallery. Upload photos and short videos (up to 60 s) of completed work; they appear on the vendor page and in customers' Feed.</td></tr>
+    <tr><td>Reviews</td><td>All reviews with replies; reply to a review.</td></tr>
+    <tr><td>Leads</td><td>Every customer who called or WhatsApped, with call outcome and length; "Request a review".</td></tr>
+    <tr><td>Profile → Business details</td><td>Business name, owner, phone, address, city, about; <b>shop photo</b> (what customers see); profile photo; sign-in email.</td></tr>
+    <tr><td>Profile → Current plan</td><td>What the plan includes and when it ends.</td></tr>
+    <tr><td>Profile → Promote your business</td><td>Paid promotions: list with status and numbers (views · likes · comments · calls); <b>New promotion</b> — package, photo/video, caption, areas, Pay &amp; launch.</td></tr>
+    <tr><td>Profile → other</td><td>KYC documents, change password, language, notifications, delete account, log out.</td></tr>
+  </table>
+</div>
+
+<!-- ============================ 5. SALESMAN APP ============================ -->
+<div class="section">
+  <h2>5. Salesman app</h2>
+  <table>
+    <tr><th style="width:28%">Screen</th><th>What it does</th></tr>
+    <tr><td>Home</td><td>Total vendors, how many are subscribed, earnings; shortcut to add a vendor.</td></tr>
+    <tr><td>Add vendor</td><td>Business details, owner, phone, GPS location of the shop (always a fresh GPS fix), shop photo. Saved as a draft so nothing is lost.</td></tr>
+    <tr><td>KYC stepper</td><td>Uploads the vendor's documents step by step.</td></tr>
+    <tr><td>Select plan → services → zones</td><td>Same choices as the vendor's own flow.</td></tr>
+    <tr><td>Subscription confirmation</td><td>Cash or online. For online, shows and shares the payment link; the vendor pays from the SMS. Shows whether the vendor was emailed a "set your password" link (or a temporary password if email failed).</td></tr>
+    <tr><td>My vendors</td><td>All vendors this salesman onboarded, with status; open one for details, resend the password link, upload documents.</td></tr>
+    <tr><td>Earnings</td><td>Commission on each sale: pending or paid.</td></tr>
+    <tr><td>Profile</td><td>Personal details, photo, password, language, log out.</td></tr>
+  </table>
+  <div class="box">A salesman can only see and act on the vendors <b>they</b> onboarded. Cash they collect is held as "unverified" until an admin confirms it, and their commission only becomes payable after that.</div>
+</div>
+
+<!-- ============================ 6. ADMIN PANEL ============================ -->
+<div class="section">
+  <h2>6. Admin panel — <code>/admin</code></h2>
+  <p>The daily workspace for every admin. Dark theme, teal accent. Lists show count tabs (e.g. All / Active / Inactive) and a <b>View</b> button that opens a detailed pop-up; record actions (approve, reject, change status…) are on the Edit page. Moderation queues keep one-click buttons on each row.</p>
+
+  <h3>Dashboard</h3>
+  <p>Headline numbers (vendors, customers, revenue this month, leads), a leads-over-time chart and salesman commission totals.</p>
+
+  <h3>Menu</h3>
+  <table>
+    <tr><th style="width:17%">Group</th><th style="width:24%">Screen</th><th>What it's for</th></tr>
+    <tr><td rowspan="6"><b>Master Data</b></td><td>Categories</td><td>Service categories (icon, order, active). Deletable only while unused.</td></tr>
+    <tr><td>Subcategories</td><td>Services within a category; flag as "Popular".</td></tr>
+    <tr><td>Plans</td><td>Silver / Gold / Platinum: price, duration, quotas (categories, services, zones, photos, videos), priority rank, add-on prices. Switched off, never deleted.</td></tr>
+    <tr><td>Zones</td><td>Main areas (e.g. Ahmedabad) drawn on a Google map (polygon or circle). New zones start as drafts.</td></tr>
+    <tr><td>Sub-zones</td><td>Areas inside a main zone (e.g. Satellite, Ranip). Customers are matched to sub-zones; only <b>active</b> ones count.</td></tr>
+    <tr><td>Document Types</td><td>KYC documents vendors upload; which are required, which need a number, expiry or back side.</td></tr>
+    <tr><td rowspan="3"><b>People</b></td><td>Users</td><td>Customers, vendors and salesmen. Approve / reject accounts, verify KYC documents (Documents tab), view subscriptions, payments and media, send a "set password" link.</td></tr>
+    <tr><td>Reviews</td><td>All reviews; hide or show.</td></tr>
+    <tr><td>Reports</td><td>Vendors reported by customers, with the reason.</td></tr>
+    <tr><td rowspan="3"><b>Content</b></td><td>Banners</td><td>Images for each app's home screen, with dates and click counts.</td></tr>
+    <tr><td>CMS Pages</td><td>Terms, privacy and other text pages.</td></tr>
+    <tr><td>Media Gallery</td><td>Every vendor photo/video; take down or restore.</td></tr>
+    <tr><td rowspan="3"><b>Promotions</b></td><td>Packages</td><td>Paid promotion packages: price, days, max areas, video allowed. Switched off, never deleted.</td></tr>
+    <tr><td>Vendor promotions</td><td>Every bought promotion with views · likes · comments · calls; <b>Hide</b> (reason sent to the vendor) / Show again.</td></tr>
+    <tr><td>Feed comments</td><td>Customer comments, reported ones first; Hide / Show again.</td></tr>
+    <tr><td><b>System</b></td><td>Settings</td><td>Business settings: subscriptions (free-trial length, grace period), payments, sign-in &amp; password reset, error log, maps, app switches (map location, call tracking, answered-call detection, enabled languages).</td></tr>
+  </table>
+
+  <h3>Work queues (opened from the dashboard and user pages)</h3>
+  <table>
+    <tr><th style="width:28%">Queue</th><th>What it's for</th></tr>
+    <tr><td>Vendor Verification</td><td>Vendors waiting for approval and KYC checks.</td></tr>
+    <tr><td>Media Moderation</td><td>Uploads waiting for review (portfolio uploads are currently auto-approved).</td></tr>
+    <tr><td>Cash Reconciliation</td><td>Cash collected by salesmen, to confirm once the money is received.</td></tr>
+    <tr><td>Commission &amp; Payouts</td><td>Salesman commissions; mark as paid.</td></tr>
+    <tr><td>Leads &amp; Analytics</td><td>Lead volumes by vendor, service and area.</td></tr>
+  </table>
+  <div class="box">Admins other than super-admins only see the screens their <b>permissions</b> allow (for example "Promotions: view / create / edit / moderate"). Permissions are ticked per admin in the super-admin panel.</div>
+</div>
+
+<!-- ============================ 7. SUPER ADMIN ============================ -->
+<div class="section">
+  <h2>7. Super-admin panel — <code>/super-admin</code></h2>
+  <p>For super-admins only, with the same login but an extra <b>two-step sign-in</b> (a 6-digit code from an authenticator app, asked once per session and again after 30 idle minutes; recovery codes are provided). Blue accent so it is never confused with <code>/admin</code>.</p>
+  <table>
+    <tr><th style="width:28%">Screen</th><th>What it's for</th></tr>
+    <tr><td>Admins</td><td>Create admin accounts and tick their permissions. There is always at least one super-admin, and nobody can edit or delete their own admin account. "Reset two-step login" for a locked-out admin.</td></tr>
+    <tr><td>System settings</td><td>Technical settings: Google Maps keys (browser key for the zone map, Places key for search), Razorpay keys and "online payments" switch, sign-in provider (Laravel or Firebase), password-reset method, API error log level. Secret keys are stored encrypted and never shown again.</td></tr>
+    <tr><td>Activity log</td><td>Who changed what and when (read-only).</td></tr>
+    <tr><td>API error log</td><td>Failed app requests, with passwords and tokens blanked out; kept 30 days. Only appears when switched on.</td></tr>
+    <tr><td>System health</td><td>Database, queue, scheduler heartbeat, storage, keys — at a glance.</td></tr>
+  </table>
+</div>
+
+<!-- ============================ 8. RULES ============================ -->
+<div class="section">
+  <h2>8. Key rules and concepts</h2>
+
+  <h4>Zones and sub-zones</h4>
+  <p>The city is divided into <b>main zones</b> (e.g. Ahmedabad) and <b>sub-zones</b> (e.g. Satellite, Ranip). A customer is matched to the <b>smallest active zone</b> that contains their location — a main zone that has sub-zones never matches by itself. A location outside every active sub-zone matches nothing, and the customer sees no vendors. Draft (inactive) zones are ignored.</p>
+
+  <h4>Plans, quotas and priority</h4>
+  <p>Each plan sets how many categories, services, zones, photos and videos a vendor may have, and a <b>priority rank</b> that puts higher plans first in search. Vendors can buy add-ons (extra categories, zones, etc.) without changing plan.</p>
+
+  <h4>Subscription life cycle</h4>
+  <div class="flow"><span class="step">Waiting for payment</span><span class="arrow">→</span><span class="step">Active</span><span class="arrow">→</span><span class="step">Grace</span><span class="arrow">→</span><span class="step">Expired</span></div>
+  <p>Only Active and Grace subscriptions are visible to customers. Price, dates and quotas are always calculated on the server. Every subscription purchase carries a unique key so a double tap can never charge twice.</p>
+
+  <h4>Account approval and KYC</h4>
+  <p>Every self-registered account must be approved by an admin before it can use the product. A vendor can only be approved once <b>every required KYC document is Verified</b> — whether they signed up themselves, were added by a salesman or created by an admin. Documents with an expiry date expire automatically (nightly check) and the vendor is notified.</p>
+
+  <h4>Passwords</h4>
+  <p>Only email + password sign-in. New accounts set their first password from an emailed link. Passwords are only ever reset by the user themselves (from "Forgot password?") — admins never reset passwords. These links are the only emails the system sends.</p>
+
+  <h4>Payments</h4>
+  <ul>
+    <li><b>Online:</b> with "online payments via Razorpay" switched on, a payment link is sent by SMS and the purchase waits as "pending payment" until Razorpay confirms it. Switched off, online payments are recorded straight away (placeholder mode).</li>
+    <li><b>Cash:</b> collected by a salesman, confirmed by an admin in Cash Reconciliation.</li>
+    <li>The apps never take payment themselves (keeps app-store billing rules out of it). All money is stored in paise.</li>
+  </ul>
+
+  <h4>Leads, calls and reviews</h4>
+  <p>A lead is recorded every time a customer taps Call or WhatsApp — before the dialer opens. On Android the vendor app can confirm whether calls were answered and the talk time (it records only times, never phone numbers). Reviews are allowed only for a contact in the last 30 days, one review per contact, editable for 24 hours.</p>
+
+  <h4>Paid promotions</h4>
+  <p>Vendors can only target <b>their own subscription areas</b>, up to the package's limit. The days count from payment. No review before going live; admins can hide a promotion (the vendor is told why). A daily job ends expired promotions and reminds vendors the day before.</p>
+
+  <h4>Notifications and live updates</h4>
+  <p>Push notifications (Firebase) for new leads, approvals, document requests, expiry reminders, review requests and promotions. A live connection (Laravel Reverb) updates the app instantly when an account is approved or a document's status changes.</p>
+</div>
+
+<!-- ============================ 9. TECH ============================ -->
+<div class="section">
+  <h2>9. Behind the scenes — technology and setup</h2>
+  <table>
+    <tr><th style="width:24%">Part</th><th>Technology</th></tr>
+    <tr><td>Server / API</td><td>Laravel 12 (PHP 8.3), MySQL / MariaDB with map (spatial) columns for zones.</td></tr>
+    <tr><td>Admin panels</td><td>Filament v3 — two panels on the same server and database.</td></tr>
+    <tr><td>Mobile apps</td><td>One Flutter project, three builds (customer, vendor, salesman); GetX; English, Hindi, Gujarati.</td></tr>
+    <tr><td>Sign-in</td><td>Laravel Sanctum tokens (one per device); optional Firebase password checking.</td></tr>
+    <tr><td>Files</td><td>Photos, videos and documents on server storage (Cloudflare R2 planned for production). KYC files are private, shared only through 30-minute signed links.</td></tr>
+    <tr><td>Maps</td><td>Google Maps for the admin zone editor and the customer map; Google Places search runs through the server so its key never ships in the app.</td></tr>
+    <tr><td>Payments</td><td>Razorpay Payment Links over the API (no SDK in the apps).</td></tr>
+    <tr><td>Notifications</td><td>Firebase Cloud Messaging; Laravel Reverb for live updates.</td></tr>
+    <tr><td>Scheduled jobs</td><td>Daily: subscription expiry, expiry reminders, KYC document expiry, promotion expiry, log clean-up.</td></tr>
+  </table>
+
+  <h3>Running it locally</h3>
+  <table>
+    <tr><th style="width:24%">What</th><th>How</th></tr>
+    <tr><td>Database</td><td>XAMPP MariaDB on port 3307 (start it from the XAMPP Control Panel).</td></tr>
+    <tr><td>API + admin</td><td><code>php artisan serve --host=0.0.0.0 --port=8001</code> in <code>backend</code> → <code>http://127.0.0.1:8001/admin</code>.</td></tr>
+    <tr><td>Live updates</td><td><code>php artisan reverb:start</code> (port 8080).</td></tr>
+    <tr><td>Phone (USB)</td><td><code>adb reverse tcp:8001 tcp:8001</code> and <code>tcp:8080</code>, then <code>flutter run --flavor customer -t lib/main_customer.dart --dart-define=API_BASE_URL=http://127.0.0.1:8001/api/</code> (vendor / salesman likewise).</td></tr>
+    <tr><td>Chrome</td><td><code>flutter run -d chrome -t lib/main_customer.dart --web-port 5001 --dart-define=API_BASE_URL=http://127.0.0.1:8001/api/</code></td></tr>
+  </table>
+
+  <div class="box warn"><b>Setup points to watch</b>
+    <ul style="margin-top:4px">
+      <li><b>Sub-zones:</b> only 3 areas are active today (Ambawadi, sector -2, ES ZONE) and most Ahmedabad sub-zones don't cover the city — customers outside them see no vendors. Redraw and activate sub-zones in the admin.</li>
+      <li><b>Places search key</b> must be a server key (not restricted to Android apps) — set it in Super Admin → System settings → Maps.</li>
+      <li><b>Android Maps key</b> must list the app's package name and SHA-1 fingerprint for each PC/keystore that builds the app.</li>
+      <li><b>Email:</b> local development writes emails to the log file; set real mail settings in <code>backend/.env</code> to send them.</li>
+    </ul>
+  </div>
+  <p class="muted small" style="margin-top:14px">This guide describes the system as built on 31 October 2026. Project decisions and conventions are recorded in <code>CLAUDE.md</code>; the full field list is in <code>SPEC.md</code>.</p>
+</div>
+
+</body>
+</html>

@@ -3,6 +3,7 @@
 namespace App\Filament\SuperAdmin\Resources\AdminResource\Pages;
 
 use App\Filament\SuperAdmin\Resources\AdminResource;
+use App\Filament\Support\SendPasswordLinkAction;
 use App\Models\User;
 use App\Services\AdminAccountService;
 use Filament\Notifications\Notification;
@@ -57,6 +58,12 @@ class EditAdmin extends EditRecord
         unset($data['is_super_admin']);
 
         return $data;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        // Re-sends an expired or missed "set your password" invite.
+        return [SendPasswordLinkAction::make()];
     }
 
     protected function getRedirectUrl(): string

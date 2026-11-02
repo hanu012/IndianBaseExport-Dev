@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 
 import '../constants/color_res.dart';
@@ -359,14 +358,93 @@ class Utils {
         destructive: true,
       );
 
-  static void showToast(String message, {bool isError = false}) {
-    Fluttertoast.showToast(
-      msg: message,
-      // Dark ink, not surfaceElevatedColor: that was a dark fill under the
-      // old theme but is near-white now, which hid the white text entirely.
-      backgroundColor: isError ? ColorRes.errorColor : ColorRes.secondaryColor,
-      textColor: ColorRes.whiteColor,
-    );
+  /// Every message in the apps: a card at the foot of the screen — round
+  /// status icon (green tick / red "!"), the message in bold and, with
+  /// [title], the message under the title in muted ink. No Retry and no
+  /// close button (decided 2026-11-01): it slides away after 3 s or on a
+  /// swipe.
+  static void showToast(String message, {bool isError = false, String? title}) {
+    // No navigator yet (or a widget test without one): nothing to show on.
+    if (Get.overlayContext == null) {
+      return;
+    }
+
+    final color = isError ? ColorRes.errorColor : ColorRes.successColor;
+
+    try {
+      Get.closeCurrentSnackbar();
+      Get.showSnackbar(
+        GetSnackBar(
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.transparent,
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.fromLTRB(16.getSize, 0, 16.getSize, 16.getSize),
+          duration: const Duration(seconds: 3),
+          isDismissible: true,
+          dismissDirection: DismissDirection.horizontal,
+          animationDuration: const Duration(milliseconds: 250),
+          messageText: Container(
+            padding: EdgeInsets.symmetric(horizontal: 14.getSize, vertical: 12.getSize),
+            decoration: BoxDecoration(
+              // A light tint of the status colour over the card white, with
+              // a matching border — the light-theme take on the design.
+              color: Color.alphaBlend(color.withValues(alpha: 0.08), ColorRes.surfaceColor),
+              borderRadius: BorderRadius.circular(14.getSize),
+              border: Border.all(color: color.withValues(alpha: 0.35)),
+              boxShadow: [
+                BoxShadow(color: ColorRes.secondaryColor.withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  height: 30.getSize,
+                  width: 30.getSize,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  child: Icon(
+                    isError ? Icons.priority_high_rounded : Icons.check_rounded,
+                    size: 18.getSize,
+                    color: ColorRes.whiteColor,
+                  ),
+                ),
+                12.widthSpacer,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BaseTextDMSans(
+                        text: title ?? message,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ColorRes.secondaryColor,
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                      ),
+                      if (title != null) ...[
+                        2.heightSpacer,
+                        BaseTextDMSans(
+                          text: message,
+                          fontSize: 11,
+                          color: ColorRes.grayColor,
+                          textAlign: TextAlign.start,
+                          maxLines: 4,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Show toast error $e');
+      }
+    }
   }
 
   /// Shared chrome for the auth screens: a coloured header carrying the title,

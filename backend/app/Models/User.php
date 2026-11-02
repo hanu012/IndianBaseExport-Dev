@@ -173,6 +173,8 @@ class User extends Authenticatable implements FilamentUser
             'role' => UserRole::class,
             'permissions' => 'array',
             'must_change_password' => 'boolean',
+            'invite_sent_at' => 'datetime',
+            'invite_expires_at' => 'datetime',
             'enable_notification' => 'boolean',
             // Two-step login (TwoFactorService). Encrypted at rest, and not
             // fillable — written only through forceFill there.
@@ -487,12 +489,47 @@ class User extends Authenticatable implements FilamentUser
      * someone else. Any request left over from the old admin-handled reset
      * is closed as resolved.
      */
+    public const INVITE_NONE = 'none';
+
+    public const INVITE_SENT = 'sent';
+
+    public const INVITE_EXPIRED = 'expired';
+
+    public const INVITE_NOT_SENT = 'not_sent';
+
+    /**
+     * Where an account that never chose its own password stands (decided
+     * 2026-11-01): its "set your password" link was sent and still works,
+     * expired unused (invite_expires_at), or never went out.
+     * INVITE_NONE once the person has set a password.
+     */
+    public function inviteStatus(): string
+    {
+        if (! $this->must_change_password) {
+            return self::INVITE_NONE;
+        }
+
+        if ($this->invite_sent_at === null) {
+            return self::INVITE_NOT_SENT;
+        }
+
+        // Each link's own lifetime: an hour for Firebase's, 7 days for ours
+        // (PasswordResetService::recordInvite). Rows from before that was
+        // recorded fall back to the 7-day link.
+        $expires = $this->invite_expires_at
+            ?? $this->invite_sent_at->copy()->addMinutes((int) config('auth.passwords.invites.expire'));
+
+        return $expires->isPast() ? self::INVITE_EXPIRED : self::INVITE_SENT;
+    }
+
     public function resetPasswordFromEmailLink(string $password): void
     {
         DB::transaction(function () use ($password) {
             $this->forceFill([
                 'password' => $password,
                 'must_change_password' => false,
+                'invite_sent_at' => null,
+                'invite_expires_at' => null,
             ])->save();
 
             $this->tokens()->delete();

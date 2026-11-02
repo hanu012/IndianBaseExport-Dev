@@ -34,6 +34,10 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Service Marketplace')
+            // Indian Base Experts logo: dark text on light, white text on dark.
+            ->brandLogo(fn (): string => asset('images/logo.png'))
+            ->darkModeBrandLogo(fn (): string => asset('images/logo-dark.png'))
+            ->brandLogoHeight('3.25rem')
 
             // Dark by default, per CLAUDE.md. Left switchable rather than
             // forced so an admin working in daylight is not stuck with it.
@@ -62,15 +66,16 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(PanelsRenderHook::BODY_END, fn (): View => view('filament.hooks.credential-share'))
             // The record View pop-up's boxed tiles (App\Filament\Support\RecordView).
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.record-view-styles'))
+            // Browser-tab icons (public/favicons).
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.favicons'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
+            // Includes FullWidthAccountWidget — the stock AccountWidget at
+            // full width — so the stock one is not listed here as well.
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                Widgets\AccountWidget::class,
-            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

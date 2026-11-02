@@ -43,6 +43,7 @@ class UpdateProfileRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
+                new \App\Rules\EmailDomainExists,
                 Rule::unique('users', 'email')->ignore($user->getKey()),
             ],
             'current_password' => ['nullable', 'string'],

@@ -73,13 +73,39 @@ approvals.
   makes, so: Firebase refuses but the local hash matches → accepted and
   pushed to Firebase (accounts move over at their next sign-in;
   `php artisan firebase:sync-users` is optional); Firebase unreachable →
-  local hash decides. Forgot password is forced to Firebase's email.
+  local hash decides. Forgot password is forced to Firebase's email —
+  **except** for an account that never set its own password (below).
   Salesman-sold vendors (at Subscribe) and admin-created accounts get a
   "set your password" email instead of a temporary password
   (`password_link_sent_to` in the subscribe response; resend via
-  `POST vendors/{vendor}/password-link` and the Users list "Send password
-  link"), only while `must_change_password` is true. If the email fails,
-  the temporary password is shown as before.
+  `POST vendors/{vendor}/password-link` and "Send password link" on the
+  Users / Admins edit pages), only while `must_change_password` is true.
+  If the email fails, the temporary password is shown as before.
+- **"Set your password" links — who sends them is a switch (decided
+  2026-11-01, switch 2026-11-02).** Every link to an account that never
+  set its own password (admin-created, salesman-sold, self-registered, and
+  "Forgot password?" on such an account) goes through
+  `PasswordResetService::sendLink`, which follows Super Admin → System
+  settings → Sign-in → `invite_email_sender`
+  (`PasswordResetService::inviteSender()`, only offered with Firebase
+  sign-in; with Laravel sign-in this server always sends):
+  - `firebase` (**default — no mail server**): Firebase's email, a 1-hour
+    link. Firebase only emails accounts it holds, so the twin is made for
+    the address as typed (`ensureAccount`) — a mistyped one too, until the
+    clean-up below.
+  - `server`: our own email via the `invites` broker (7 days, vs 15 minutes
+    for a reset); no Firebase twin until the person sets a password on our
+    page (`pushPassword`). Needs real `MAIL_*` — without it new accounts get
+    no email and app sign-up fails (503).
+  Either way, signing in with a temporary password makes no twin.
+  `users.invite_sent_at` / `invite_expires_at` (each link's own lifetime) +
+  `User::inviteStatus()` give the "Password" column on Users / Admins
+  (Invite sent / Invite expired / Not set); `accounts:expire-invites`
+  (daily) removes the Firebase twin of anyone who never set a password
+  once their invite has lapsed — never while a link is still out. Emails are also refused at entry when their domain
+  cannot receive mail (`App\Rules\EmailDomainExists` — DNS MX/A, fails open
+  on a DNS outage, off in tests via `EMAIL_DOMAIN_CHECK=false`). A mailbox at
+  a real domain cannot be checked; only the link proves it.
 
 ## Architecture — Laravel backend
 No restriction here on repositories, interfaces, or DTOs — use standard
@@ -186,6 +212,36 @@ this backend.
   Settings → App → "Confirm answered calls (vendor app)"
   (`call_answer_detection_enabled`, default on; only effective with call
   tracking on). The apps show it through `Utils.callLabel`.
+- **Paid promotions + customer Feed (decided 2026-10-31).** Admin →
+  Promotions → Packages (`PromotionPackage`: days, price, video allowed;
+  switched off, never deleted; no area limit — `max_zones` is unused). A
+  vendor buys one from the app
+  (Profile → Promote your business; `POST vendors/me/promotions`, multipart,
+  `Idempotency-Key`), picking a photo/video, a caption (≤150) and any of
+  **their own subscription zones** (`PromotionService::zonesFor`). Paid
+  exactly like a subscription: `PaymentService::payOnline()` takes a
+  `Subscription|Promotion`; `payments.subscription_id` is nullable and
+  `payments.promotion_id` set instead; the Razorpay webhook routes a
+  promotion payment to `PromotionService`. Days count from payment.
+  **No review before going live** (decided) — Admin → Vendor promotions →
+  Hide (reason pushed to the vendor) is the takedown. The customer app's
+  **Feed tab** (Home · Feed · Favourites · Profile; `CustomerHomeController`
+  `feedTab`/`favoritesTab`) is `GET /api/feed` (`FeedService`): for the
+  customer's zone, **live paid promotions targeting it first, then the
+  approved portfolio photos/videos of vendors serving it**
+  (`VendorSearchService::eligibleVendorIds`, the same rule as search), paged
+  as one list; chips `filter=for_you|offers|nearby|following` (offers =
+  promotions only, following = favourite vendors, nearby = closest vendor
+  first). Likes and comments are polymorphic (`feed_likes` on Promotion |
+  Media | FeedComment, `feed_comments` on Promotion | Media); comments are
+  threaded one level (`parent_id`; a reply to a reply joins its thread), the
+  post's vendor replies as the business (`vendor_id`, "Business" tag; vendor
+  app Profile → Customer comments, `vendors/me/feed-comments`). Comments are
+  public at once, customers report them, Admin → Feed comments hides them. A Call/WhatsApp
+  from a promoted post is a lead with `leads.promotion_id` (the vendor's
+  "calls from this ad"); `subcategory_id` is optional on `POST /leads` and
+  falls back to the vendor's first service. `promotions:process-expiry`
+  runs daily. Permissions `promotions.viewAny/create/update/moderate`.
 - Widening an existing enum column (adding a new status value) needs a
   raw `DB::statement("ALTER TABLE ... MODIFY ... ENUM(...)")` migration
   — Laravel's `->change()` isn't reliably supported on enum columns via

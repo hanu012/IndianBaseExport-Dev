@@ -125,6 +125,8 @@ flutter:
 
   assets:
     - assets/translations/
+    # Each app's icon artwork for its splash (512px copies of assets/app_icons).
+    - assets/images/splash/
 
   # Poppins, the same family as the provider app. Regular–Bold are copied
   # from that app; ExtraBold is added because this app uses w800 widely and

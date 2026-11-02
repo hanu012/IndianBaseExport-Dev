@@ -5,6 +5,7 @@ import '../../../constants/constant.dart' show Constants;
 import '../../../utils/location_capture.dart';
 import '../../../utils/place_service.dart';
 import '../customer_favorites_module/customer_favorites_controller.dart';
+import '../customer_feed_module/customer_feed_controller.dart';
 import '../customer_select_location_module/customer_select_location_view.dart';
 import '../customer_set_location_module/customer_set_location_view.dart';
 import '../customer_zone_location_module/customer_zone_location_view.dart';
@@ -81,8 +82,10 @@ class CustomerHomeController extends GetxController {
     restoreOrDetectLocation();
   }
 
-  /// Index of the Favourites destination in the view's IndexedStack.
-  static const int favoritesTab = 1;
+  /// Indexes of the destinations in the view's IndexedStack:
+  /// Home 0, Feed 1, Favourites 2, Profile 3.
+  static const int feedTab = 1;
+  static const int favoritesTab = 2;
 
   void changeTab(int index) {
     tabIndex = index;
@@ -93,6 +96,16 @@ class CustomerHomeController extends GetxController {
     // vendor's page) would never appear. Reload on every visit.
     if (index == favoritesTab && Get.isRegistered<CustomerFavoritesController>()) {
       Get.find<CustomerFavoritesController>().fetchAPI();
+    }
+
+    // The Feed's first load can run before Home has resolved the area;
+    // an empty Feed tries again when opened.
+    if (index == feedTab && Get.isRegistered<CustomerFeedController>()) {
+      final feed = Get.find<CustomerFeedController>();
+
+      if (feed.items.isEmpty) {
+        feed.fetchAPI();
+      }
     }
   }
 
@@ -322,6 +335,11 @@ class CustomerHomeController extends GetxController {
       // Who is nearby depends on where "here" is, so this follows every
       // location change rather than running once at startup.
       fetchNearbyVendorsAPI();
+
+      // So does the Feed: its posts are for this area.
+      if (Get.isRegistered<CustomerFeedController>()) {
+        Get.find<CustomerFeedController>().fetchAPI();
+      }
     }
   }
 

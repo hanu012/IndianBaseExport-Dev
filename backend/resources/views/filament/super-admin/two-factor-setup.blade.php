@@ -1,65 +1,117 @@
 <x-filament-panels::page>
-    @if ($recoveryCodes !== [])
-        <x-filament::section>
-            <x-slot name="heading">Two-step login is on — save your recovery codes</x-slot>
+    @include('filament.super-admin.partials.two-factor-styles')
 
-            <p class="text-sm text-gray-600 dark:text-gray-300">
-                If you lose your phone, each of these codes lets you in once instead of an app code.
-                Keep them somewhere safe (a password manager, or printed). They are not shown again.
-            </p>
+    <div class="tf-wrap tf-wide">
+        @if ($recoveryCodes !== [])
+            {{-- Shown once, right after setup — never again. --}}
+            <div class="tf-card"
+                 x-data="{
+                     copied: false,
+                     codes: @js(implode("\n", $recoveryCodes)),
+                     copy() { navigator.clipboard.writeText(this.codes); this.copied = true; setTimeout(() => this.copied = false, 2000) },
+                     download() {
+                         const text = 'Service Marketplace — Super Admin recovery codes\n{{ auth()->user()->email }}\nEach code works once.\n\n' + this.codes + '\n';
+                         const link = document.createElement('a');
+                         link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+                         link.download = 'recovery-codes.txt';
+                         link.click();
+                         URL.revokeObjectURL(link.href);
+                     },
+                 }">
+                <div class="tf-icon" aria-hidden="true"><x-filament::icon icon="heroicon-o-check-badge" /></div>
+                <h2 class="tf-title">Two-step login is on</h2>
+                <p class="tf-sub">Save these recovery codes now. If you lose your phone, each one lets you in once instead of an app code.</p>
 
-            <ul class="mt-4 font-mono text-sm" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.5rem;">
-                @foreach ($recoveryCodes as $code)
-                    <li class="rounded-lg bg-gray-100 px-3 py-2 text-center dark:bg-white/5">{{ $code }}</li>
-                @endforeach
-            </ul>
+                <ul class="tf-codes">
+                    @foreach ($recoveryCodes as $code)
+                        <li>{{ $code }}</li>
+                    @endforeach
+                </ul>
 
-            <div class="mt-6">
-                <x-filament::button wire:click="finish">I have saved them — continue</x-filament::button>
+                <div class="tf-actions">
+                    <x-filament::button color="gray" icon="heroicon-m-clipboard-document" x-on:click="copy()">
+                        <span x-text="copied ? 'Copied' : 'Copy all'">Copy all</span>
+                    </x-filament::button>
+                    <x-filament::button color="gray" icon="heroicon-m-arrow-down-tray" x-on:click="download()">
+                        Download .txt
+                    </x-filament::button>
+                </div>
+
+                <div class="tf-note tf-warn">
+                    <strong>They are not shown again.</strong> Keep them in a password manager or print them —
+                    not on the same phone as your authenticator app.
+                </div>
+
+                <div class="tf-btn-full">
+                    <x-filament::button size="lg" wire:click="finish" icon="heroicon-m-arrow-right" icon-position="after">
+                        I have saved them — continue
+                    </x-filament::button>
+                </div>
             </div>
-        </x-filament::section>
-    @else
-        <x-filament::section>
-            <x-slot name="heading">1. Add this account to your authenticator app</x-slot>
+        @else
+            <div class="tf-card">
+                <div class="tf-icon" aria-hidden="true"><x-filament::icon icon="heroicon-o-device-phone-mobile" /></div>
+                <h2 class="tf-title">Set up two-step login</h2>
+                <p class="tf-sub">The Super Admin panel asks for a code from an authenticator app on your phone each time you sign in.</p>
+            </div>
 
-            <p class="text-sm text-gray-600 dark:text-gray-300">
-                The Super Admin panel needs a code from an authenticator app on your phone (Google Authenticator,
-                Microsoft Authenticator, Authy…) every time you sign in. In the app choose
-                <strong>Add account → Enter a setup key</strong>, then:
-            </p>
+            <div class="tf-card">
+                <div class="tf-step">
+                    <span class="tf-step-num">1</span>
+                    <div class="tf-step-body">
+                        <div class="tf-step-title">Add this account to your authenticator app</div>
+                        <p>
+                            Use Google Authenticator, Microsoft Authenticator or Authy. Choose
+                            <strong>Add account → Enter a setup key</strong> and type in:
+                        </p>
 
-            <dl class="mt-4 text-sm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem;">
-                <div>
-                    <dt class="text-gray-500 dark:text-gray-400">Account name</dt>
-                    <dd class="font-medium">{{ auth()->user()->email }}</dd>
+                        <dl class="tf-fields">
+                            <div class="tf-field">
+                                <dt>Account name</dt>
+                                <dd>{{ auth()->user()->email }}</dd>
+                            </div>
+                            <div class="tf-field">
+                                <dt>Type of key</dt>
+                                <dd>Time based</dd>
+                            </div>
+                        </dl>
+
+                        <div class="tf-key"
+                             x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js(str_replace(' ', '', $this->formattedSecret()))); this.copied = true; setTimeout(() => this.copied = false, 2000) } }">
+                            <code>{{ $this->formattedSecret() }}</code>
+                            <x-filament::button size="sm" color="gray" icon="heroicon-m-clipboard-document" x-on:click="copy()">
+                                <span x-text="copied ? 'Copied' : 'Copy key'">Copy key</span>
+                            </x-filament::button>
+                        </div>
+
+                        <p>
+                            <a href="{{ $this->otpauthUri() }}" class="tf-link" style="display: inline; text-align: left;">
+                                Opening this on your phone? Tap here to add it straight to the app.
+                            </a>
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <dt class="text-gray-500 dark:text-gray-400">Key</dt>
-                    <dd class="select-all font-mono font-medium tracking-wider">{{ $this->formattedSecret() }}</dd>
+            </div>
+
+            <div class="tf-card">
+                <div class="tf-step">
+                    <span class="tf-step-num">2</span>
+                    <div class="tf-step-body">
+                        <div class="tf-step-title">Enter the 6-digit code the app shows</div>
+                        <p>The code changes every 30 seconds — type the one showing now.</p>
+
+                        <form wire:submit="confirm" class="tf-form" style="max-width: 22rem;">
+                            {{ $this->form }}
+
+                            <div class="tf-btn-full">
+                                <x-filament::button type="submit" size="lg" icon="heroicon-m-lock-closed">
+                                    Turn on two-step login
+                                </x-filament::button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div>
-                    <dt class="text-gray-500 dark:text-gray-400">Type of key</dt>
-                    <dd class="font-medium">Time based</dd>
-                </div>
-            </dl>
-
-            <p class="mt-4 text-sm">
-                <a href="{{ $this->otpauthUri() }}" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
-                    Opening this on your phone? Tap here to add it straight to the app.
-                </a>
-            </p>
-        </x-filament::section>
-
-        <x-filament::section>
-            <x-slot name="heading">2. Enter the code the app shows</x-slot>
-
-            <form wire:submit="confirm">
-                {{ $this->form }}
-
-                <div class="mt-4">
-                    <x-filament::button type="submit">Turn on two-step login</x-filament::button>
-                </div>
-            </form>
-        </x-filament::section>
-    @endif
+            </div>
+        @endif
+    </div>
 </x-filament-panels::page>

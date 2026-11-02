@@ -36,6 +36,22 @@ class TwoFactorChallenge extends Page implements HasForms
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
+    /** Typing a recovery code instead of the app's 6-digit code. */
+    public bool $useRecovery = false;
+
+    /** The card carries its own title; no page heading above it. */
+    public function getHeading(): string
+    {
+        return '';
+    }
+
+    public function toggleRecovery(): void
+    {
+        $this->useRecovery = ! $this->useRecovery;
+        $this->resetErrorBag();
+        $this->form->fill();
+    }
+
     public function mount(): void
     {
         if (RequireSuperAdminTwoFactor::isFresh()) {
@@ -52,10 +68,16 @@ class TwoFactorChallenge extends Page implements HasForms
         return $form
             ->schema([
                 TextInput::make('code')
-                    ->label('Code from your authenticator app, or a recovery code')
+                    ->label(fn (): string => $this->useRecovery ? 'Recovery code' : '6-digit code')
+                    ->hiddenLabel()
+                    ->placeholder(fn (): string => $this->useRecovery ? 'xxxxx-xxxxx' : '000000')
                     ->required()
                     ->autocomplete('one-time-code')
                     ->autofocus()
+                    ->extraInputAttributes(fn (): array => [
+                        'inputmode' => $this->useRecovery ? 'text' : 'numeric',
+                        'class' => 'tf-code-input',
+                    ])
                     ->maxLength(20),
             ])
             ->statePath('data');

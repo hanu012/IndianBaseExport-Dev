@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import '../../../constants/app.export.dart';
 import '../../../constants/constant.dart';
 import '../customer_favorites_module/customer_favorites_view.dart';
+import '../customer_feed_module/customer_feed_view.dart';
 import '../customer_profile_module/customer_profile_view.dart';
 import '../customer_service_search_module/customer_service_search_view.dart';
 import '../customer_subcategories_module/customer_subcategories_view.dart';
@@ -31,8 +32,10 @@ class CustomerHomeView extends StatelessWidget {
           backgroundColor: ServiceTokens.bg,
           body: IndexedStack(
             index: controller.tabIndex,
+            // Order matches CustomerHomeController's feedTab / favoritesTab.
             children: [
               homeTab(controller),
+              const CustomerFeedView(),
               const CustomerFavoritesView(embedded: true),
               const CustomerProfileView(),
             ],
@@ -44,6 +47,10 @@ class CustomerHomeView extends StatelessWidget {
               CustomerNavItem(
                 icon: Icons.home_outlined,
                 label: tr(StringRes.homeTab),
+              ),
+              CustomerNavItem(
+                icon: Icons.dynamic_feed_outlined,
+                label: tr(StringRes.feedTab),
               ),
               CustomerNavItem(
                 icon: Icons.favorite_border,
@@ -121,7 +128,7 @@ class CustomerHomeView extends StatelessWidget {
                 10.widthSpacer,
                 CustomerIconButton(
                   icon: Icons.favorite_border,
-                  onTap: () => controller.changeTab(1),
+                  onTap: () => controller.changeTab(CustomerHomeController.favoritesTab),
                   tooltip: tr(StringRes.favoritesTab),
                   fillHeight: true,
                 ),

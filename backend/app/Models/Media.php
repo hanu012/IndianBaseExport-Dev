@@ -6,6 +6,7 @@ use App\Models\Concerns\RecordsAuditLog;
 use App\Models\Concerns\TracksFileDisk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -56,6 +57,17 @@ class Media extends Model
     public function mediable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /** Feed likes — an approved portfolio item is a post in the customer Feed. */
+    public function likes(): MorphMany
+    {
+        return $this->morphMany(FeedLike::class, 'likeable');
+    }
+
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(FeedComment::class, 'commentable');
     }
 
     public function subcategory(): BelongsTo

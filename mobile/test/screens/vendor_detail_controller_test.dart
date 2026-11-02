@@ -92,9 +92,10 @@ class _FakeVendorDetailDataSource extends DataSource {
   @override
   Future<CommonResponse?> createLeadAPI({
     required int vendorId,
-    required int subcategoryId,
+    int? subcategoryId,
     int? zoneId,
     required String channel,
+    int? promotionId,
   }) async {
     capturedLeadChannels.add(channel);
 
@@ -553,9 +554,10 @@ class _ThrowingLeadDataSource extends _FakeVendorDetailDataSource {
   @override
   Future<CommonResponse?> createLeadAPI({
     required int vendorId,
-    required int subcategoryId,
+    int? subcategoryId,
     int? zoneId,
     required String channel,
+    int? promotionId,
   }) async {
     throw Exception('network exploded');
   }

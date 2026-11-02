@@ -17,6 +17,13 @@ Schedule::command('subscriptions:send-expiry-reminders')->daily();
 // Vendor KYC documents past their expiry date → Expired, vendor notified.
 Schedule::command('kyc:expire-documents')->daily();
 
+// Paid promotions past their days → ended; vendors reminded the day before.
+Schedule::command('promotions:process-expiry')->daily();
+
+// "Set your password" invites: Firebase accounts of anyone who never set a
+// password are removed (they are created only once one is set).
+Schedule::command('accounts:expire-invites')->daily();
+
 // API error log rows older than ApiErrorLog::RETENTION_DAYS.
 Schedule::command('model:prune', ['--model' => [\App\Models\ApiErrorLog::class]])->daily();
 

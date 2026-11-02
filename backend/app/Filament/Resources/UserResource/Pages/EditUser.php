@@ -8,7 +8,6 @@ use App\Exceptions\KycIncompleteException;
 use App\Filament\Resources\UserResource;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\AccountInviteService;
 use App\Services\VendorVerificationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -103,22 +102,7 @@ class EditUser extends EditRecord
      */
     private function sendPasswordLinkAction(): Action
     {
-        return Action::make('sendPasswordLink')
-            ->label('Send password link')
-            ->icon('heroicon-o-envelope')
-            ->color('gray')
-            ->requiresConfirmation()
-            ->modalHeading('Email a password link?')
-            ->modalDescription(fn (User $record): string => "{$record->email} gets a link to set their own password. It expires after about an hour.")
-            ->visible(fn (User $record): bool => app(AccountInviteService::class)->canInvite($record))
-            ->authorize(fn (User $record): bool => Auth::user()?->can('update', $record) ?? false)
-            ->action(function (User $record): void {
-                $sentTo = app(AccountInviteService::class)->send($record);
-
-                $sentTo !== null
-                    ? Notification::make()->title("Password link sent to {$sentTo}")->success()->send()
-                    : Notification::make()->title('The email could not be sent')->body('Ask a super-admin to check Super Admin → System settings → Sign-in, then try again.')->danger()->send();
-            });
+        return \App\Filament\Support\SendPasswordLinkAction::make();
     }
 
     private function isVendor(User $record): bool

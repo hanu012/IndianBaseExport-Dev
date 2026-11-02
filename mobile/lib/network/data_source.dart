@@ -61,6 +61,8 @@ class DataSource {
   static const String customerMeAddresses = 'customers/me/addresses';
   static const String placesAutocomplete = 'places/autocomplete';
   static const String placesDetails = 'places/details';
+  static const String feed = 'feed';
+  static const String vendorMePromotions = 'vendors/me/promotions';
 
   late final Dio _dio = Dio(
     BaseOptions(
@@ -383,18 +385,170 @@ class DataSource {
   /// Counts for the vendor home "Recent calls" card.
   Future<CommonResponse?> vendorLeadsSummaryAPI() => _get('$vendorMeLeads/summary');
 
+  /// [subcategoryId] may be left out from the Feed, where a post is not
+  /// tied to one service — the server then uses the vendor's own first.
+  /// [promotionId] marks a contact that started from a paid promotion.
   Future<CommonResponse?> createLeadAPI({
     required int vendorId,
-    required int subcategoryId,
+    int? subcategoryId,
     int? zoneId,
     required String channel,
+    int? promotionId,
   }) =>
       _post(leads, {
         'vendor_id': vendorId,
-        'subcategory_id': subcategoryId,
+        'subcategory_id': ?subcategoryId,
         'zone_id': ?zoneId,
         'channel': channel,
+        'promotion_id': ?promotionId,
       });
+
+  // ── Feed (customer) ─────────────────────────────────────────────────────
+
+  /// The Feed tab: paid promotions for the customer's zone first, then the
+  /// portfolio posts of vendors serving it. Location as for vendor search.
+  Future<CommonResponse?> feedAPI({
+    int? zoneId,
+    double? latitude,
+    double? longitude,
+    String? pincode,
+    int page = 1,
+    int perPage = 10,
+    /// for_you | offers | nearby | following — the chips.
+    String filter = 'for_you',
+  }) =>
+      _get(feed, queryParameters: {
+        'zone_id': ?zoneId,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
+        'pincode': ?pincode,
+        'page': page,
+        'per_page': perPage,
+        'filter': filter,
+      });
+
+  /// [type] is 'promotion' or 'post'. Answers {liked, likes_count}.
+  Future<CommonResponse?> toggleFeedLikeAPI({required String type, required int id}) =>
+      _post('$feed/$type/$id/like', {});
+
+  Future<CommonResponse?> feedCommentsAPI({required String type, required int id, int page = 1}) =>
+      _get('$feed/$type/$id/comments', queryParameters: {'page': page, 'per_page': 20});
+
+  /// [parentId] makes it a reply (it joins that comment's thread).
+  Future<CommonResponse?> addFeedCommentAPI({required String type, required int id, required String body, int? parentId}) =>
+      _post('$feed/$type/$id/comments', {'body': body, 'parent_id': ?parentId});
+
+  Future<CommonResponse?> likeFeedCommentAPI({required int commentId}) => _post('$feed/comments/$commentId/like', {});
+
+  /// Vendor: customers' comments on their own posts, and replying as the business.
+  Future<CommonResponse?> vendorFeedCommentsAPI({int page = 1}) =>
+      _get('vendors/me/feed-comments', queryParameters: {'page': page, 'per_page': 20});
+
+  Future<CommonResponse?> vendorReplyFeedCommentAPI({required int commentId, required String body}) =>
+      _post('vendors/me/feed-comments/$commentId/reply', {'body': body});
+
+  Future<CommonResponse?> deleteFeedCommentAPI({required int commentId}) => _delete('$feed/comments/$commentId');
+
+  Future<CommonResponse?> reportFeedCommentAPI({required int commentId, String? reason}) =>
+      _post('$feed/comments/$commentId/report', {'reason': ?reason});
+
+  // ── Paid promotions (vendor) ───────────────────────────────────────────
+
+  /// Active packages and the vendor's own areas to choose from.
+  Future<CommonResponse?> promotionOptionsAPI() => _get('$vendorMePromotions/options');
+
+  /// [tab] is 'live' (live, paused, hidden, waiting for payment) or 'ended'
+  /// (ended, cancelled). `meta.counts` carries both tab counts.
+  Future<CommonResponse?> myPromotionsAPI({String? tab, int page = 1, int perPage = 15}) =>
+      _get(vendorMePromotions, queryParameters: {'tab': ?tab, 'page': page, 'per_page': perPage});
+
+  /// The details screen: the promotion, amount paid, newest comments.
+  Future<CommonResponse?> promotionDetailAPI({required int promotionId}) => _get('$vendorMePromotions/$promotionId');
+
+  /// Buys a promotion. [idempotencyKey] is kept for the whole attempt, so a
+  /// retried tap can never pay twice. The photo/video is optional.
+  ///
+  /// [fileBytes] + [fileName] instead of [filePath] on Flutter Web, where a
+  /// picked file has no path on disk to read from.
+  Future<CommonResponse?> createPromotionAPI({
+    required int packageId,
+    String? mediaType,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    required String caption,
+    required List<int> zoneIds,
+    required String idempotencyKey,
+    ProgressCallback? onSendProgress,
+  }) async {
+    final form = FormData.fromMap({
+      'promotion_package_id': packageId,
+      'caption': caption,
+      ...await _promotionMedia(mediaType, filePath, fileBytes, fileName),
+    });
+
+    // One `zone_ids[]` field per area — what Laravel reads as an array.
+    for (final zoneId in zoneIds) {
+      form.fields.add(MapEntry('zone_ids[]', '$zoneId'));
+    }
+
+    return _multipart(
+      vendorMePromotions,
+      form,
+      onSendProgress: onSendProgress,
+      headers: {'Idempotency-Key': idempotencyKey},
+    );
+  }
+
+  /// "Edit post": a new caption, optionally a new photo/video, or
+  /// [removeMedia] to make it text only.
+  Future<CommonResponse?> updatePromotionPostAPI({
+    required int promotionId,
+    required String caption,
+    String? mediaType,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    bool removeMedia = false,
+    ProgressCallback? onSendProgress,
+  }) async {
+    final form = FormData.fromMap({
+      'caption': caption,
+      'remove_media': removeMedia ? 1 : 0,
+      ...await _promotionMedia(mediaType, filePath, fileBytes, fileName),
+    });
+
+    return _multipart('$vendorMePromotions/$promotionId/post', form, onSendProgress: onSendProgress);
+  }
+
+  Future<Map<String, dynamic>> _promotionMedia(String? mediaType, String? filePath, List<int>? fileBytes, String? fileName) async {
+    if (fileBytes == null && filePath == null) {
+      return {};
+    }
+
+    return {
+      'media_type': mediaType ?? 'image',
+      'file': fileBytes != null
+          ? MultipartFile.fromBytes(fileBytes, filename: fileName ?? (mediaType == 'video' ? 'promotion.mp4' : 'promotion.jpg'))
+          : await MultipartFile.fromFile(filePath!),
+    };
+  }
+
+  /// Off the Feed, clock stopped.
+  Future<CommonResponse?> pausePromotionAPI({required int promotionId}) => _post('$vendorMePromotions/$promotionId/pause', {});
+
+  /// Back on the Feed; the paused days are added to the end date.
+  Future<CommonResponse?> resumePromotionAPI({required int promotionId}) => _post('$vendorMePromotions/$promotionId/resume', {});
+
+  /// Stops it now — no refund.
+  Future<CommonResponse?> endPromotionAPI({required int promotionId}) => _post('$vendorMePromotions/$promotionId/end', {});
+
+  /// Buys the same package again; its days are added once paid.
+  Future<CommonResponse?> extendPromotionAPI({required int promotionId, required String idempotencyKey}) =>
+      _post('$vendorMePromotions/$promotionId/extend', {}, headers: {'Idempotency-Key': idempotencyKey});
+
+  /// Withdraws a promotion still waiting for payment.
+  Future<CommonResponse?> cancelPromotionAPI({required int promotionId}) => _delete('$vendorMePromotions/$promotionId');
 
   /// SPEC section 9: gated server-side on a matching lead within the
   /// last 30 days — the server resolves which lead, this call only
@@ -640,12 +794,13 @@ class DataSource {
     String path,
     FormData form, {
     ProgressCallback? onSendProgress,
+    Map<String, String>? headers,
   }) async {
     try {
       final response = await _dio.post(
         path,
         data: form,
-        options: Options(contentType: 'multipart/form-data'),
+        options: Options(contentType: 'multipart/form-data', headers: headers),
         onSendProgress: onSendProgress,
       );
       return _parse(response);

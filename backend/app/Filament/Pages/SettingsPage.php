@@ -10,6 +10,7 @@ use App\Services\PasswordResetService;
 use App\Services\Payments\RazorpayClient;
 use App\Support\Languages;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -88,9 +89,11 @@ class SettingsPage extends Page implements HasForms
         'razorpay_key_id',
         'auth_provider',
         'password_reset_method',
+        'invite_email_sender',
         'firebase_web_api_key',
         'api_error_log_enabled',
         'api_error_log_level',
+        'admin_favicon',
         // The secrets are deliberately NOT here — see SECRETS.
     ];
 
@@ -155,9 +158,13 @@ class SettingsPage extends Page implements HasForms
                 ? Setting::get('password_reset_method')
                 : PasswordResetService::LARAVEL,
             'auth_provider' => AuthProvider::chosen(),
+            'invite_email_sender' => in_array(Setting::get('invite_email_sender'), PasswordResetService::INVITE_SENDERS, true)
+                ? Setting::get('invite_email_sender')
+                : PasswordResetService::INVITE_BY_FIREBASE,
             'firebase_web_api_key' => Setting::get('firebase_web_api_key'),
             'api_error_log_enabled' => (bool) Setting::get('api_error_log_enabled', false),
             'api_error_log_level' => Setting::get('api_error_log_level', 'server'),
+            'admin_favicon' => Setting::get('admin_favicon'),
             ...$this->emptySecrets(),
         ]);
     }
@@ -266,6 +273,24 @@ class SettingsPage extends Page implements HasForms
                             ->columnSpanFull()
                             ->helperText(fn (Get $get): string => $this->passwordResetHelp((string) $get('password_reset_method'))),
 
+                        // Who emails "set your password" to accounts that
+                        // have none yet (decided 2026-11-02). Only a choice
+                        // with Firebase sign-in; otherwise this server does.
+                        Select::make('invite_email_sender')
+                            ->label('"Set your password" emails for new accounts sent by')
+                            ->options([
+                                PasswordResetService::INVITE_BY_FIREBASE => 'Firebase — no email server needed',
+                                PasswordResetService::INVITE_BY_SERVER => 'This server — needs email (MAIL_*) set up',
+                            ])
+                            ->required()
+                            ->selectablePlaceholder(false)
+                            ->live()
+                            ->visible(fn (Get $get): bool => $get('auth_provider') === AuthProvider::FIREBASE)
+                            ->columnSpanFull()
+                            ->helperText(fn (Get $get): string => $get('invite_email_sender') === PasswordResetService::INVITE_BY_SERVER
+                                ? 'This server emails a link that lasts 7 days. No Firebase account is made until the person sets a password, so a mistyped email never reaches Firebase. Needs MAIL_* in .env — without it, new accounts get no email and app sign-up fails.'
+                                : 'Firebase emails a link that lasts 1 hour. Firebase needs an account to email, so one is made for the address as typed; if the link is never used, the daily clean-up removes it. Covers admin-created accounts, salesman-sold vendors and app sign-ups.'),
+
                         TextInput::make('firebase_web_api_key')
                             ->label('Firebase Web API key')
                             ->maxLength(255)
@@ -303,6 +328,23 @@ class SettingsPage extends Page implements HasForms
                                 .'"All" is useful while testing the apps; it records a lot more on a live system.'),
                     ])
                     ->columns(2),
+
+                Section::make('Branding')
+                    ->visible(static::shows('branding'))
+                    ->description('The icon in the browser tab for both admin panels (/admin and /super-admin).')
+                    ->schema([
+                        FileUpload::make('admin_favicon')
+                            ->label('Favicon')
+                            ->image()
+                            ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
+                            ->disk('public')
+                            ->directory('branding')
+                            ->maxSize(1024)
+                            ->imagePreviewHeight('96')
+                            ->helperText('A square PNG (at least 96 × 96, ideally 512 × 512), ICO or SVG, up to 1 MB. '
+                                .'Remove it and save to go back to the built-in Indian Base Experts icon. '
+                                .'Browsers keep favicons for a while — refresh with Ctrl+F5 to see a change.'),
+                    ]),
 
                 Section::make('Maps')
                     ->visible(static::shows('maps'))

@@ -8,6 +8,8 @@ import '../delete_account_module/delete_account_view.dart';
 import '../vendor_business_details_module/vendor_business_details_view.dart';
 import '../vendor_current_plan_module/vendor_current_plan_view.dart';
 import '../vendor_login_module/vendor_login_view.dart';
+import '../vendor_feed_comments_module/vendor_feed_comments_view.dart';
+import '../vendor_promotions_module/vendor_promotions_view.dart';
 import '../vendor_select_plan_module/vendor_select_plan_view.dart';
 import '../../vendor_flow/vendor_documents_module/vendor_documents_view.dart';
 import 'vendor_profile_controller.dart';
@@ -316,6 +318,23 @@ class VendorProfileView extends StatelessWidget {
           ]),
           trailing: const VendorRowChevron(),
           onTap: () => Get.to(() => const VendorCurrentPlanView()),
+        ),
+        // Paid promotions (decided 2026-10-31): a post at the top of
+        // customers' Feed in the vendor's own areas.
+        VendorSettingsRow(
+          icon: Icons.campaign_outlined,
+          title: tr(StringRes.promoteBusinessRow),
+          subtitle: tr(StringRes.promoteBusinessDesc),
+          trailing: const VendorRowChevron(),
+          onTap: () => Get.to(() => const VendorPromotionsView()),
+        ),
+        // Customers' comments on the vendor's Feed posts; reply as the business.
+        VendorSettingsRow(
+          icon: Icons.forum_outlined,
+          title: tr(StringRes.feedCommentsRow),
+          subtitle: tr(StringRes.feedCommentsDesc),
+          trailing: const VendorRowChevron(),
+          onTap: () => Get.to(() => const VendorFeedCommentsView()),
         ),
         // Hidden for now (Constants.showVendorUpsell), and omitted on the
         // top tier regardless — an "Upgrade" row that leads to nothing

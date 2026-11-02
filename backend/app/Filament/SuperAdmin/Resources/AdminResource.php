@@ -78,6 +78,7 @@ class AdminResource extends Resource
 
                     TextInput::make('email')
                         ->email()
+                        ->rule(new \App\Rules\EmailDomainExists)
                         ->required()
                         ->maxLength(255)
                         // Trashed rows count, as on the Users screen: the
@@ -153,6 +154,8 @@ class AdminResource extends Resource
                         'Not set up yet' => 'warning',
                         default => 'gray',
                     }),
+
+                \App\Filament\Support\InviteStatusColumn::make(),
 
                 TextColumn::make('updated_at')
                     ->label('Last modified')

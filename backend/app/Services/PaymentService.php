@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Payment;
+use App\Models\Promotion;
+use App\Models\PromotionExtension;
 use App\Models\Salesman;
 use App\Models\Setting;
 use App\Models\Subscription;
@@ -54,14 +56,21 @@ class PaymentService
      *                                 create the link — the caller's
      *                                 transaction rolls back
      */
-    public function payOnline(Subscription $subscription, int $amountPaise, ?SubscriptionAddon $addon = null): Payment
+    public function payOnline(Subscription|Promotion|PromotionExtension $for, int $amountPaise, ?SubscriptionAddon $addon = null): Payment
     {
+        // A payment belongs to a subscription OR a paid promotion (or its
+        // extension) (decided 2026-10-31) — same gateway, same link flow,
+        // same placeholder.
+        $owner = match (true) {
+            $for instanceof Promotion => ['promotion_id' => $for->id],
+            $for instanceof PromotionExtension => ['promotion_id' => $for->promotion_id, 'promotion_extension_id' => $for->id],
+            default => ['subscription_id' => $for->id, 'subscription_addon_id' => $addon?->id],
+        };
+
         // Nothing to collect (a downgrade credited down to zero): no link —
         // Razorpay refuses a zero amount anyway.
         if (! $this->gatewayEnabled() || $amountPaise <= 0) {
-            return Payment::create([
-                'subscription_id' => $subscription->id,
-                'subscription_addon_id' => $addon?->id,
+            return Payment::create($owner + [
                 'amount_paise' => $amountPaise,
                 'mode' => 'online',
                 'status' => 'captured',
@@ -76,24 +85,26 @@ class PaymentService
             throw new PaymentGatewayException('Online payments are switched on but Razorpay keys are not configured.');
         }
 
-        $payment = Payment::create([
-            'subscription_id' => $subscription->id,
-            'subscription_addon_id' => $addon?->id,
+        $payment = Payment::create($owner + [
             'amount_paise' => $amountPaise,
             'mode' => 'online',
             'gateway' => 'razorpay',
             'status' => 'pending',
         ]);
 
-        $vendor = $subscription->vendor;
-        $planName = $subscription->plan?->name ?? 'plan';
+        $vendor = $for instanceof PromotionExtension ? $for->promotion?->vendor : $for->vendor;
+
+        $description = match (true) {
+            $for instanceof Promotion => 'Service Marketplace — '.($for->package?->name ?? 'promotion').' promotion',
+            $for instanceof PromotionExtension => 'Service Marketplace — promotion extended by '.$for->days.' days',
+            $addon !== null => "Service Marketplace — {$addon->quantity} extra ".$addon->getAttribute('resource'),
+            default => 'Service Marketplace — '.($for->plan?->name ?? 'plan').' subscription',
+        };
 
         $link = $this->razorpay->createPaymentLink(
             amountPaise: $amountPaise,
             referenceId: 'payment_'.$payment->id,
-            description: $addon === null
-                ? "Service Marketplace — {$planName} subscription"
-                : "Service Marketplace — {$addon->quantity} extra ".$addon->getAttribute('resource'),
+            description: $description,
             customerName: $vendor?->business_name ?? 'Vendor',
             customerPhone: $vendor?->phone,
         );

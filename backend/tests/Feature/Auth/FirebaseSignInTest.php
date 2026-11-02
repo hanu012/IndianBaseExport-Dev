@@ -14,12 +14,16 @@ use App\Models\Subcategory;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\Zone;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\GeneratesTestRsaKey;
 use Tests\TestCase;
 
 /**
@@ -32,6 +36,7 @@ use Tests\TestCase;
 class FirebaseSignInTest extends TestCase
 {
     use RefreshDatabase;
+    use GeneratesTestRsaKey;
 
     private const PASSWORD = 'Correct#Horse2026';
 
@@ -39,8 +44,7 @@ class FirebaseSignInTest extends TestCase
 
     private function useFirebase(): void
     {
-        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        openssl_pkey_export($key, $pem);
+        $pem = self::testRsaPrivateKeyPem();
 
         config()->set('services.fcm.project_id', 'demo-project');
         config()->set('services.fcm.client_email', 'firebase-adminsdk@demo-project.iam.gserviceaccount.com');
@@ -70,6 +74,38 @@ class FirebaseSignInTest extends TestCase
             "{$api}/projects/demo-project/accounts:update" => Http::response(['localId' => 'fb-updated']),
             "{$api}/projects/demo-project/accounts:delete" => Http::response([]),
         ]);
+    }
+
+    /** Super Admin → Sign-in → "set your password" emails sent by this server. */
+    private function useServerInvites(): void
+    {
+        Setting::updateOrCreate(['key' => 'invite_email_sender'], ['value' => 'server', 'type' => 'string']);
+    }
+
+    /**
+     * Our own "set your password" email went to this address (decided
+     * 2026-11-01: never Firebase's for an account with no password yet),
+     * and its invite is recorded.
+     */
+    private function assertInviteEmailedTo(string $email): void
+    {
+        $user = User::where('email', $email)->sole();
+
+        Notification::assertSentTo($user, ResetPassword::class);
+        $this->assertNotNull($user->invite_sent_at);
+    }
+
+    /** Firebase neither got an account made nor was asked to send anything. */
+    private function assertNoFirebaseAccountMade(): void
+    {
+        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/projects/demo-project/accounts')
+            || str_contains($request->url(), 'accounts:sendOobCode'));
+    }
+
+    /** The mail server is down: every notification send throws. */
+    private function failEmail(): void
+    {
+        $this->mock(Dispatcher::class, fn ($mock) => $mock->shouldReceive('send')->andThrow(new \RuntimeException('SMTP down')));
     }
 
     private function refuseSignIn(): array
@@ -237,13 +273,16 @@ class FirebaseSignInTest extends TestCase
     // ── Sign-up and password changes ─────────────────────────────────────
 
     /**
-     * No password at sign-up: Firebase gets a password-less account and
-     * sends its "set your password" email, which opens our page.
+     * No password at sign-up: our "set your password" email goes out, and
+     * Firebase gets NO account until the person sets a password from it —
+     * so a made-up address never reaches Firebase (decided 2026-11-01).
      */
-    public function test_sign_up_creates_the_user_here_and_firebase_emails_the_link(): void
+    public function test_with_server_invites_sign_up_emails_our_link_and_makes_no_firebase_account_yet(): void
     {
         $this->useFirebase();
         $this->fakeFirebase();
+        $this->useServerInvites();
+        Notification::fake();
 
         $this->postJson('/api/auth/register', [
             'name' => 'Ravi Patel',
@@ -256,20 +295,44 @@ class FirebaseSignInTest extends TestCase
 
         $this->assertNotNull($user->customer);
         $this->assertTrue($user->must_change_password);
-        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/projects/demo-project/accounts')
-            && ! isset($request['password']));
-        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:sendOobCode')
-            && $request['requestType'] === 'PASSWORD_RESET'
-            && $request['email'] === 'ravi@example.com');
+        $this->assertNull($user->firebase_uid);
+        $this->assertSame(User::INVITE_SENT, $user->inviteStatus());
+        $this->assertInviteEmailedTo('ravi@example.com');
+        $this->assertNoFirebaseAccountMade();
     }
 
-    /** The email is the only way in: if Firebase cannot send it, nothing is kept. */
-    public function test_sign_up_is_undone_if_firebase_cannot_send_the_email(): void
+    /** Setting the password from that link is what creates the Firebase account. */
+    public function test_the_firebase_account_is_made_when_the_password_is_set_from_the_link(): void
     {
         $this->useFirebase();
         $this->fakeFirebase([
-            'identitytoolkit.googleapis.com/v1/accounts:sendOobCode*' => Http::response(['error' => ['message' => 'INTERNAL']], 500),
+            'identitytoolkit.googleapis.com/v1/projects/demo-project/accounts' => Http::response(['localId' => 'fb-new']),
         ]);
+        $user = $this->customer(['must_change_password' => true]);
+        $token = \Illuminate\Support\Facades\Password::broker('invites')->createToken($user);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertOk()->assertSee('Password set');
+
+        $user->refresh();
+        $this->assertFalse($user->must_change_password);
+        $this->assertNull($user->invite_sent_at);
+        $this->assertSame('fb-new', $user->firebase_uid);
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/projects/demo-project/accounts')
+            && $request['email'] === $user->email);
+    }
+
+    /** The email is the only way in: if it cannot be sent, nothing is kept. */
+    public function test_with_server_invites_sign_up_is_undone_if_the_email_cannot_be_sent(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase();
+        $this->useServerInvites();
+        $this->failEmail();
 
         $this->postJson('/api/auth/register', [
             'name' => 'Ravi Patel',
@@ -396,36 +459,34 @@ class FirebaseSignInTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_a_sold_vendor_is_emailed_a_set_password_link(): void
+    public function test_with_server_invites_a_sold_vendor_is_emailed_our_link(): void
     {
         $this->useFirebase();
-        $this->fakeFirebase([
-            'identitytoolkit.googleapis.com/v1/projects/demo-project/accounts' => Http::response(['localId' => 'fb-vendor']),
-        ]);
+        $this->fakeFirebase();
+        $this->useServerInvites();
+        Notification::fake();
 
         [$response, $vendor] = $this->salesmanSells();
 
         $response->assertJsonPath('data.temporary_password', null)
-            ->assertJsonPath('data.password_link_sent_to', 'v***@example.com')
-            ->assertJsonPath('data.vendor.status', 'active');
+            ->assertJsonPath('data.password_link_sent_to', 'v***@example.com');
 
-        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:sendOobCode')
-            && $request['requestType'] === 'PASSWORD_RESET'
-            && $request['email'] === 'vendor@example.com');
+        $this->assertInviteEmailedTo('vendor@example.com');
+        $this->assertNoFirebaseAccountMade();
 
         $vendorUser = $vendor->user->fresh();
-        $this->assertSame('fb-vendor', $vendorUser->firebase_uid);
+        $this->assertNull($vendorUser->firebase_uid);
         // Cleared only once they set their password from the link.
         $this->assertTrue($vendorUser->must_change_password);
     }
 
-    /** Onboarding never stalls on Firebase: no email → the old temporary password. */
+    /** Onboarding never stalls on email: no email → the old temporary password. */
     public function test_if_the_email_fails_the_salesman_gets_a_temporary_password(): void
     {
         $this->useFirebase();
-        $this->fakeFirebase([
-            'identitytoolkit.googleapis.com/v1/accounts:sendOobCode*' => Http::response(['error' => ['message' => 'INTERNAL']], 500),
-        ]);
+        $this->fakeFirebase();
+        $this->useServerInvites();
+        $this->failEmail();
 
         [$response, $vendor] = $this->salesmanSells();
 
@@ -439,6 +500,7 @@ class FirebaseSignInTest extends TestCase
     {
         $this->useFirebase();
         $this->fakeFirebase();
+        Notification::fake();
 
         [, $vendor, $salesmanUser] = $this->salesmanSells();
 
@@ -477,10 +539,12 @@ class FirebaseSignInTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_an_admin_created_salesman_is_emailed_a_link(): void
+    public function test_with_server_invites_an_admin_created_salesman_is_emailed_our_link(): void
     {
         $this->useFirebase();
         $this->fakeFirebase();
+        $this->useServerInvites();
+        Notification::fake();
         $this->actingAs(User::factory()->role(UserRole::Admin)->create());
 
         Livewire::test(CreateUser::class)
@@ -497,18 +561,21 @@ class FirebaseSignInTest extends TestCase
 
         $this->assertContains('Password link sent', $titles);
         $this->assertFalse($titles->contains(fn ($title) => str_starts_with((string) $title, 'Temporary password for')));
-        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:sendOobCode')
-            && $request['email'] === 'riya@example.com');
+        $this->assertInviteEmailedTo('riya@example.com');
+        $this->assertNoFirebaseAccountMade();
 
         $user = User::where('email', 'riya@example.com')->sole();
         $this->assertTrue($user->isApproved());
         $this->assertTrue($user->must_change_password);
+        $this->assertNull($user->firebase_uid);
     }
 
     public function test_the_user_page_offers_send_password_link_only_while_needed(): void
     {
         $this->useFirebase();
         $this->fakeFirebase();
+        $this->useServerInvites();
+        Notification::fake();
         $this->actingAs(User::factory()->role(UserRole::Admin)->create());
 
         $waiting = User::factory()->role(UserRole::Salesman)->create(['must_change_password' => true]);
@@ -522,8 +589,144 @@ class FirebaseSignInTest extends TestCase
             ->assertActionVisible('sendPasswordLink')
             ->callAction('sendPasswordLink');
 
+        $this->assertInviteEmailedTo($waiting->email);
+        $this->assertNoFirebaseAccountMade();
+    }
+
+    // ── Firebase sends the invites (the default, decided 2026-11-02) ─────
+
+    /** No email server needed: Firebase emails the link, so it needs the account first. */
+    public function test_by_default_firebase_emails_the_set_password_link(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase([
+            'identitytoolkit.googleapis.com/v1/projects/demo-project/accounts' => Http::response(['localId' => 'fb-vendor']),
+        ]);
+        Notification::fake();
+
+        [$response, $vendor] = $this->salesmanSells();
+
+        $response->assertJsonPath('data.temporary_password', null)
+            ->assertJsonPath('data.password_link_sent_to', 'v***@example.com');
+
         Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:sendOobCode')
-            && $request['email'] === $waiting->email);
+            && $request['requestType'] === 'PASSWORD_RESET'
+            && $request['email'] === 'vendor@example.com');
+        Notification::assertNothingSent();
+
+        $vendorUser = $vendor->user->fresh();
+        $this->assertSame('fb-vendor', $vendorUser->firebase_uid);
+        $this->assertTrue($vendorUser->must_change_password);
+        // Firebase's link lasts an hour, and the status says so.
+        $this->assertSame(User::INVITE_SENT, $vendorUser->inviteStatus());
+        $this->travel(61)->minutes();
+        $this->assertSame(User::INVITE_EXPIRED, $vendorUser->fresh()->inviteStatus());
+    }
+
+    public function test_by_default_sign_up_is_undone_if_firebase_cannot_send_the_email(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase([
+            'identitytoolkit.googleapis.com/v1/accounts:sendOobCode*' => Http::response(['error' => ['message' => 'INTERNAL']], 500),
+        ]);
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Ravi Patel',
+            'email' => 'ravi@example.com',
+            'role' => 'customer',
+        ])->assertStatus(503)
+            ->assertJsonPath('error.code', 'PASSWORD_LINK_NOT_SENT');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ravi@example.com']);
+    }
+
+    /** The clean-up never breaks a link that is still out. */
+    public function test_the_daily_job_keeps_the_firebase_account_while_the_invite_is_live(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase();
+
+        $user = User::factory()->role(UserRole::Salesman)->create(['must_change_password' => true]);
+        $user->forceFill([
+            'firebase_uid' => 'fb-live',
+            'invite_sent_at' => now(),
+            'invite_expires_at' => now()->addHour(),
+        ])->save();
+
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'accounts:delete'));
+        $this->assertSame('fb-live', $user->fresh()->firebase_uid);
+
+        $this->travel(2)->hours();
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:delete') && $request['localId'] === 'fb-live');
+        $this->assertNull($user->fresh()->firebase_uid);
+    }
+
+    // ── Invite expiry (decided 2026-11-01) ───────────────────────────────
+
+    public function test_an_unused_invite_shows_as_expired_after_7_days(): void
+    {
+        $user = User::factory()->role(UserRole::Salesman)->create(['must_change_password' => true]);
+        $this->assertSame(User::INVITE_NOT_SENT, $user->inviteStatus());
+
+        $user->forceFill(['invite_sent_at' => now()->subDays(6)])->save();
+        $this->assertSame(User::INVITE_SENT, $user->fresh()->inviteStatus());
+
+        $user->forceFill(['invite_sent_at' => now()->subDays(8)])->save();
+        $this->assertSame(User::INVITE_EXPIRED, $user->fresh()->inviteStatus());
+
+        $user->fresh()->resetPasswordFromEmailLink(self::NEW_PASSWORD);
+        $this->assertSame(User::INVITE_NONE, $user->fresh()->inviteStatus());
+    }
+
+    public function test_an_invite_link_still_works_after_15_minutes_unlike_a_reset(): void
+    {
+        $user = $this->customer(['must_change_password' => true]);
+        $token = \Illuminate\Support\Facades\Password::broker('invites')->createToken($user);
+
+        $this->travel(3)->days();
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertOk()->assertSee('Password set');
+
+        $this->assertFalse($user->fresh()->must_change_password);
+    }
+
+    /** Firebase accounts made for addresses nobody confirmed (the old way) are removed. */
+    public function test_the_daily_job_removes_firebase_accounts_of_users_who_never_set_a_password(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase([
+            'identitytoolkit.googleapis.com/v1/projects/demo-project/accounts:lookup' => Http::response(['users' => [['localId' => 'fb-stray']]]),
+        ]);
+
+        $stray = User::factory()->role(UserRole::Admin)->create(['email' => 'meet@example.com', 'must_change_password' => true]);
+        $settled = $this->customer();
+        $settled->forceFill(['firebase_uid' => 'fb-real'])->save();
+
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:delete') && $request['localId'] === 'fb-stray');
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'accounts:delete') && $request['localId'] === 'fb-real');
+        $this->assertSame('fb-real', $settled->fresh()->firebase_uid);
+        $this->assertNull($stray->fresh()->firebase_uid);
+    }
+
+    /** A temporary password someone else gave them does not create the Firebase account. */
+    public function test_signing_in_with_a_temporary_password_makes_no_firebase_account(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase($this->refuseSignIn());
+        $this->customer(['must_change_password' => true]);
+
+        $this->login()->assertOk();
+
+        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/projects/demo-project/accounts'));
     }
 
     public function test_the_user_page_has_no_password_link_with_laravel_sign_in(): void

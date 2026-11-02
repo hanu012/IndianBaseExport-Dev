@@ -153,6 +153,13 @@ class ServiceMarketplaceApp extends StatelessWidget {
       // The splash decides the real entry screen (login, home, or one of
       // the two account gates) — see SplashController.entryScreen().
       home: const SplashView(),
+
+      // Always start at the splash. On Flutter Web the browser URL holds the
+      // last screen's name (e.g. #/VendorLoginView, GetX's name for a pushed
+      // page); after a hot restart or a refresh Flutter would try that as
+      // the initial route, find no such route, and log "Could not navigate
+      // to initial route". Screens are pushed as widgets, never by name.
+      initialRoute: '/',
     );
   }
 

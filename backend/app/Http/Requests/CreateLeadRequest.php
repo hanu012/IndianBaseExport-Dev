@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * POST /api/leads (SPEC section 4 item 7, task 5.4). Validates that the
@@ -30,9 +31,17 @@ class CreateLeadRequest extends FormRequest
     {
         return [
             'vendor_id' => ['required', 'integer', 'exists:vendors,id'],
-            'subcategory_id' => ['required', 'integer', 'exists:subcategories,id'],
+            // Optional from the Feed, where a post is not tied to one service:
+            // LeadController falls back to the vendor's own first service.
+            'subcategory_id' => ['nullable', 'integer', 'exists:subcategories,id'],
             'zone_id' => ['nullable', 'integer', 'exists:zones,id'],
             'channel' => ['required', 'string', 'in:call,whatsapp'],
+            // Set when the contact started from a paid promotion — the
+            // vendor's "calls from this ad". Must be that vendor's own.
+            'promotion_id' => [
+                'nullable', 'integer',
+                Rule::exists('promotions', 'id')->where('vendor_id', (int) $this->input('vendor_id')),
+            ],
         ];
     }
 }

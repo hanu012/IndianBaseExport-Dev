@@ -21,6 +21,8 @@ class Payment extends Model
     protected $fillable = [
         'subscription_id',
         'subscription_addon_id',
+        'promotion_id',
+        'promotion_extension_id',
         'amount_paise',
         'currency',
         'mode',
@@ -52,6 +54,21 @@ class Payment extends Model
     public function addon(): BelongsTo
     {
         return $this->belongsTo(SubscriptionAddon::class, 'subscription_addon_id');
+    }
+
+    /**
+     * Set when this payment buys a paid promotion; subscription_id is then
+     * null (a payment belongs to one or the other).
+     */
+    public function promotion(): BelongsTo
+    {
+        return $this->belongsTo(Promotion::class);
+    }
+
+    /** Set when this payment extends a running promotion. */
+    public function promotionExtension(): BelongsTo
+    {
+        return $this->belongsTo(PromotionExtension::class);
     }
 
     public function isPending(): bool

@@ -161,6 +161,12 @@ class Vendor extends Model
         return $this->morphMany(Media::class, 'mediable');
     }
 
+    /** Paid posts in the customer Feed (Promotion). */
+    public function promotions(): HasMany
+    {
+        return $this->hasMany(Promotion::class);
+    }
+
     /**
      * The subscription the vendor dashboard, services-management
      * screens, and the public vendor detail page all key off (task

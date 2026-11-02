@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Tests\Concerns\GeneratesTestRsaKey;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
 class PasswordResetMethodsTest extends TestCase
 {
     use RefreshDatabase;
+    use GeneratesTestRsaKey;
 
     private const NEW_PASSWORD = 'BrandNew#Pass2026';
 
@@ -47,8 +49,7 @@ class PasswordResetMethodsTest extends TestCase
     /** Firebase set up: a throwaway service-account key and a Web API key. */
     private function configureFirebase(): void
     {
-        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        openssl_pkey_export($key, $pem);
+        $pem = self::testRsaPrivateKeyPem();
 
         config()->set('services.fcm.project_id', 'demo-project');
         config()->set('services.fcm.client_email', 'firebase-adminsdk@demo-project.iam.gserviceaccount.com');
@@ -101,7 +102,8 @@ class PasswordResetMethodsTest extends TestCase
 
         foreach (['laravel', 'firebase'] as $method) {
             $this->useMethod($method);
-            $this->forgot('nobody@example.com')->assertStatus(422);
+            // Not forgot(): that helper expects success.
+            $this->postJson('/api/auth/password-reset-requests', ['email' => 'nobody@example.com'])->assertStatus(422);
         }
 
         Notification::assertNothingSent();
@@ -173,11 +175,33 @@ class PasswordResetMethodsTest extends TestCase
         $this->getJson('/api/settings')->assertJsonPath('data.password_reset_method', 'laravel');
     }
 
+    /**
+     * With "set your password" emails sent by this server (Super Admin →
+     * Sign-in), an account that never set its own password gets OUR 7-day
+     * link even in Firebase mode (decided 2026-11-01/02).
+     */
+    public function test_firebase_mode_with_server_invites_sends_our_link_to_an_account_with_no_password_yet(): void
+    {
+        $this->configureFirebase();
+        $this->useMethod('firebase');
+        Setting::updateOrCreate(['key' => 'invite_email_sender'], ['value' => 'server', 'type' => 'string']);
+        Notification::fake();
+        Http::fake();
+        $user = $this->user();
+
+        $this->forgot();
+
+        Notification::assertSentTo($user, ResetPassword::class);
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'accounts:sendOobCode'));
+    }
+
     public function test_firebase_mode_has_firebase_send_the_email(): void
     {
         $this->configureFirebase();
         $this->useMethod('firebase');
         $user = $this->user();
+        // A Firebase reset is for someone who has set their own password.
+        $user->forceFill(['must_change_password' => false])->save();
 
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response(['access_token' => 'ya29.test']),

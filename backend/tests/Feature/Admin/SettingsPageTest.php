@@ -64,6 +64,54 @@ class SettingsPageTest extends TestCase
             ->assertFormFieldIsHidden('free_trial_max_days');
     }
 
+    /**
+     * Who sends "set your password" emails (decided 2026-11-02): only shown
+     * with Firebase sign-in, Firebase by default, and the choice is saved.
+     */
+    /** Branding: an uploaded favicon replaces the built-in pack; clearing it brings the pack back. */
+    public function test_an_uploaded_favicon_is_used_by_the_panels_and_can_be_removed(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $this->systemSettings()
+            ->assertFormFieldIsVisible('admin_favicon')
+            ->fillForm(['admin_favicon' => \Illuminate\Http\UploadedFile::fake()->image('icon.png', 512, 512)])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $path = Setting::get('admin_favicon');
+        $this->assertNotEmpty($path);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($path);
+
+        $html = view('filament.hooks.favicons')->render();
+        $this->assertStringContainsString($path, $html);
+        $this->assertStringNotContainsString('favicons/favicon-32x32.png', $html);
+
+        $this->systemSettings()
+            ->fillForm(['admin_favicon' => null])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertNull(Setting::get('admin_favicon'));
+        $this->assertStringContainsString('favicons/favicon-32x32.png', view('filament.hooks.favicons')->render());
+    }
+
+    public function test_the_invite_email_sender_switch_shows_with_firebase_sign_in_and_saves(): void
+    {
+        $this->assertSame('firebase', Setting::get('invite_email_sender'));
+
+        $this->systemSettings()
+            ->fillForm(['auth_provider' => 'laravel'])
+            ->assertFormFieldIsHidden('invite_email_sender')
+            ->fillForm(['auth_provider' => 'firebase'])
+            ->assertFormFieldIsVisible('invite_email_sender')
+            ->fillForm(['invite_email_sender' => 'server'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('server', Setting::get('invite_email_sender'));
+    }
+
     /** Saving one half never blanks the other half's values. */
     public function test_each_page_saves_only_its_own_keys(): void
     {

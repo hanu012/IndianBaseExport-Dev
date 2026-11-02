@@ -74,4 +74,9 @@ return [
         'private_key_base64' => env('FCM_PRIVATE_KEY_BASE64'),
     ],
 
+
+    // App\Rules\EmailDomainExists — refuse emails whose domain cannot
+    // receive mail (typos like gmial.com). Off in tests (phpunit.xml).
+    'email_domain_check' => (bool) env('EMAIL_DOMAIN_CHECK', true),
+
 ];

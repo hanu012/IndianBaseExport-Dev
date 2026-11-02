@@ -48,6 +48,12 @@ class TwoFactorSetup extends Page implements HasForms
     /** @var array<int, string> shown once, right after setup */
     public array $recoveryCodes = [];
 
+    /** The cards carry their own titles; no page heading above them. */
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     public function mount(TwoFactorService $twoFactor): void
     {
         /** @var User $user */
@@ -69,9 +75,11 @@ class TwoFactorSetup extends Page implements HasForms
             ->schema([
                 TextInput::make('code')
                     ->label('6-digit code from the app')
+                    ->hiddenLabel()
+                    ->placeholder('000000')
                     ->required()
                     ->autocomplete('one-time-code')
-                    ->extraInputAttributes(['inputmode' => 'numeric'])
+                    ->extraInputAttributes(['inputmode' => 'numeric', 'class' => 'tf-code-input'])
                     ->maxLength(10),
             ])
             ->statePath('data');

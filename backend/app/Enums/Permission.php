@@ -58,6 +58,14 @@ enum Permission: string
     case PaymentsViewAny = 'payments.viewAny';
     case PaymentsVerify = 'payments.verify';
 
+    // Paid promotions and the customer Feed (decided 2026-10-31): packages
+    // (create/update — never deleted), and taking down a promotion or a
+    // feed comment (moderate).
+    case PromotionsViewAny = 'promotions.viewAny';
+    case PromotionsCreate = 'promotions.create';
+    case PromotionsUpdate = 'promotions.update';
+    case PromotionsModerate = 'promotions.moderate';
+
     // Content
     case BannersViewAny = 'banners.viewAny';
     case BannersCreate = 'banners.create';

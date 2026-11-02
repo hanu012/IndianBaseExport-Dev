@@ -44,7 +44,7 @@ class StoreVendorDraftRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
 
             // Required: becomes the vendor's login.
-            'email' => ['required', 'string', 'email:rfc', 'max:255'],
+            'email' => ['required', 'string', 'email:rfc', 'max:255', new \App\Rules\EmailDomainExists],
 
             'address' => ['nullable', 'string', 'max:255'],
 

@@ -54,6 +54,26 @@ class UserResourceTest extends TestCase
             ->assertCanNotSeeTableRecords([$customer]);
     }
 
+    /**
+     * A salesman with a monthly target runs the money formatter — which once
+     * named its argument $paise, and Filament (injecting by name) crashed.
+     */
+    public function test_the_view_modal_shows_a_salesmans_monthly_target(): void
+    {
+        $user = User::factory()->role(UserRole::Salesman)->create();
+        Salesman::create([
+            'user_id' => $user->id,
+            'employee_code' => 'EMP-TGT',
+            'phone' => '9900000011',
+            'monthly_target_paise' => 5_000_000,
+        ]);
+
+        Livewire::test(ListUsers::class)
+            ->mountTableAction('view', $user)
+            ->assertHasNoTableActionErrors()
+            ->assertSee('50,000');
+    }
+
     public function test_the_view_modal_opens_for_each_role(): void
     {
         foreach ([UserRole::Salesman, UserRole::Vendor, UserRole::Customer] as $role) {

@@ -95,6 +95,46 @@ class VendorSearchService
             return ['zone' => null, 'paginator' => null];
         }
 
+        $query = $this->eligibleVendorsQuery($subcategoryId, $zone);
+
+        // Distance is selected whenever a point is available, independent
+        // of the chosen sort — "Top rated" still shows "1.2 km" on each
+        // card, it just is not what the list is ordered by.
+        if ($lat !== null && $lng !== null) {
+            [$expression, $bindings] = GeoDistance::sqlExpression('vendors.latitude', 'vendors.longitude', $lat, $lng);
+            $query->selectRaw("{$expression} as distance_km", $bindings);
+        }
+
+        // Higher rank = higher tier = listed first (Silver 1, Gold 2,
+        // Platinum 3 in PlanSeeder; the admin help text says the same).
+        $query->orderByDesc('plan_quotas.priority_rank');
+        $this->applySecondarySort($query, $sort, $lat, $lng);
+
+        return ['zone' => $zone, 'paginator' => $query->paginate($perPage)];
+    }
+
+    /**
+     * Ids of every vendor a customer in this zone may be shown — any service.
+     * The customer Feed's organic posts come from these vendors, so the Feed
+     * and search can never disagree about who is live where.
+     *
+     * @return array<int, int>
+     */
+    public function eligibleVendorIds(Zone $zone): array
+    {
+        return $this->eligibleVendorsQuery(null, $zone)
+            ->pluck('vendors.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * The match rule itself (see the class docblock): an active, unsuspended
+     * vendor whose live subscription covers this zone and the service — or,
+     * with no service given, at least one live service.
+     */
+    private function eligibleVendorsQuery(?int $subcategoryId, Zone $zone): Builder
+    {
         $today = Carbon::today();
         $gracePeriodDays = (int) Setting::get('grace_period_days', 7);
         $graceCutoff = $today->copy()->subDays($gracePeriodDays);
@@ -104,7 +144,7 @@ class VendorSearchService
         // never left running alongside it — see Subscription's own
         // docblock), so this join can't multiply rows per vendor and
         // needs no distinct()/groupBy().
-        $query = Vendor::query()
+        return Vendor::query()
             // Vendor::scopeActive() leaves 'status'/'is_suspended'
             // unqualified, which becomes ambiguous once subscriptions
             // (its own 'status' column) is joined in — qualified here
@@ -146,21 +186,6 @@ class VendorSearchService
                 ->where('subscription_items.item_type', 'zone')
                 ->where('subscription_items.item_id', $zone->id))
             ->select('vendors.*');
-
-        // Distance is selected whenever a point is available, independent
-        // of the chosen sort — "Top rated" still shows "1.2 km" on each
-        // card, it just is not what the list is ordered by.
-        if ($lat !== null && $lng !== null) {
-            [$expression, $bindings] = GeoDistance::sqlExpression('vendors.latitude', 'vendors.longitude', $lat, $lng);
-            $query->selectRaw("{$expression} as distance_km", $bindings);
-        }
-
-        // Higher rank = higher tier = listed first (Silver 1, Gold 2,
-        // Platinum 3 in PlanSeeder; the admin help text says the same).
-        $query->orderByDesc('plan_quotas.priority_rank');
-        $this->applySecondarySort($query, $sort, $lat, $lng);
-
-        return ['zone' => $zone, 'paginator' => $query->paginate($perPage)];
     }
 
     /**

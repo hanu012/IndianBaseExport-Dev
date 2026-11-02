@@ -79,6 +79,16 @@ class ColorRes {
 
   static Color transparent = Colors.transparent;
 
+  // ── Splash (feed-redesign.html "Splash screen") ──────────────────────────
+  // A deeper petrol-teal than the header gradient, radial from the logo.
+  // White text on it is correct — it is a dark surface.
+  static Color splashGlow = const Color(0xFF0A6B80);
+  static Color splashMid = const Color(0xFF033545);
+  static Color splashDeep = const Color(0xFF012029);
+
+  /// The moving segment of the splash loading bar. Decorative only.
+  static Color splashGold = const Color(0xFFE7C27F);
+
   /// Swatch for ThemeData.primarySwatch.
   static MaterialColor primaryMaterialColor =
       MaterialColor(ColorRes.primaryColor.toARGB32(), <int, Color>{

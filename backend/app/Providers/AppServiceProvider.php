@@ -61,11 +61,14 @@ class AppServiceProvider extends ServiceProvider
             $minutes = config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
 
             if ($notifiable->must_change_password ?? false) {
+                // The invite broker's link: days, not minutes.
+                $days = intdiv((int) config('auth.passwords.invites.expire'), 60 * 24);
+
                 return (new MailMessage)
                     ->subject('Set your password')
                     ->line('Welcome! Your account is ready — choose a password to start using the app.')
                     ->action('Set your password', $url)
-                    ->line("This link expires in {$minutes} minutes. If it has, use \"Forgot password?\" in the app to get a new one.");
+                    ->line("This link expires in {$days} days. If it has, use \"Forgot password?\" in the app to get a new one.");
             }
 
             return (new MailMessage)

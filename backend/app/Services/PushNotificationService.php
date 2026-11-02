@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Models\Lead;
+use App\Models\Promotion;
 use App\Models\Subscription;
 use App\Models\Vendor;
 use App\Models\VendorDocument;
 use App\Notifications\LeadReceivedNotification;
+use App\Notifications\PromotionStatusNotification;
 use App\Notifications\ReviewRequestedNotification;
 use App\Notifications\SubscriptionExpiringNotification;
 use App\Notifications\VendorApprovedNotification;
@@ -73,5 +75,14 @@ class PushNotificationService
     public function notifySubscriptionExpiring(Subscription $subscription, int $daysRemaining): void
     {
         $subscription->vendor->user->notify(new SubscriptionExpiringNotification($subscription, $daysRemaining));
+    }
+
+    /**
+     * Paid promotions (decided 2026-10-31) — to the VENDOR: live on payment,
+     * ending the day before, or taken down by an admin with the reason.
+     */
+    public function notifyPromotion(Promotion $promotion, string $event, ?string $reason = null): void
+    {
+        $promotion->vendor?->user?->notify(new PromotionStatusNotification($promotion, $event, $reason));
     }
 }

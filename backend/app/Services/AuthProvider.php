@@ -84,7 +84,10 @@ class AuthProvider
                 return false;
             }
 
-            if ($e instanceof Firebase\FirebaseAuthException) {
+            // Not for a temporary password someone else gave them: such an
+            // account gets its Firebase twin only once it sets its own
+            // (auth/change-password or the emailed link — decided 2026-11-01).
+            if ($e instanceof Firebase\FirebaseAuthException && ! $user->must_change_password) {
                 $this->pushPassword($user, $password);
             }
 

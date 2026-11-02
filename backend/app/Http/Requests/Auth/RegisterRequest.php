@@ -23,7 +23,7 @@ class RegisterRequest extends FormRequest
             // Not scoped withoutTrashed(): the users table carries a real
             // unique index on email that soft-deleted rows still occupy, so
             // validation has to match the constraint the database enforces.
-            'email' => ['required', 'string', 'email:rfc', 'max:255', Rule::unique('users', 'email')],
+            'email' => ['required', 'string', 'email:rfc', 'max:255', new \App\Rules\EmailDomainExists, Rule::unique('users', 'email')],
 
             // No password at sign-up: the account is emailed a "set your
             // password" link instead (AuthController::register), which also

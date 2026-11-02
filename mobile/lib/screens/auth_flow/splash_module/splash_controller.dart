@@ -16,8 +16,8 @@ import '../vendor_login_module/vendor_login_view.dart';
 /// here unchanged. offAll is correct for leaving: nothing sits beneath the
 /// splash, so there is no live screen for it to duplicate.
 class SplashController extends GetxController {
-  /// Long enough to read the brand, short enough not to feel like a wait.
-  static const Duration displayFor = Duration(milliseconds: 1500);
+  /// How long the brand splash stays up — 4.5 seconds (asked for 4–5).
+  static const Duration displayFor = Duration(milliseconds: 4000);
 
   FlavorConfig get config => FlavorConfig.current;
 
@@ -31,6 +31,47 @@ class SplashController extends GetxController {
         return Icons.handyman_outlined;
     }
   }
+
+  /// This app's own icon artwork (assets/app_icons, resized for the splash
+  /// into assets/images/splash).
+  String get brandImage {
+    switch (config.flavor) {
+      case Flavor.salesman:
+        return 'assets/images/splash/salesman.png';
+      case Flavor.vendor:
+        return 'assets/images/splash/vendor.png';
+      case Flavor.customer:
+        return 'assets/images/splash/customer.png';
+    }
+  }
+
+  /// The three small tags under the strapline — what this app is for.
+  List<String> get brandTags {
+    switch (config.flavor) {
+      case Flavor.salesman:
+        return [
+          StringRes.splashTagVendors,
+          StringRes.splashTagPlans,
+          StringRes.splashTagCommission,
+        ];
+      case Flavor.vendor:
+        return [
+          StringRes.splashTagListing,
+          StringRes.splashTagLeads,
+          StringRes.splashTagPromotions,
+        ];
+      case Flavor.customer:
+        return [
+          StringRes.splashTagServices,
+          StringRes.splashTagOffers,
+          StringRes.splashTagTrusted,
+        ];
+    }
+  }
+
+  /// Shown at the foot of the splash. Keep in step with `version:` in
+  /// pubspec.yaml (there is no package_info dependency to read it).
+  static const String appVersion = '1.0.0';
 
   String get brandTitle {
     switch (config.flavor) {

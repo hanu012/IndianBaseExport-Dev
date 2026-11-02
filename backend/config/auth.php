@@ -105,6 +105,17 @@ return [
             // Seconds a user must wait before another reset email is issued.
             'throttle' => 60,
         ],
+
+        // "Set your password" links to accounts that never chose one
+        // (admin-created, salesman-sold, self-registered — decided
+        // 2026-11-01). Same table as resets; a week to act on it, after
+        // which the invite shows as expired and a new link can be sent.
+        'invites' => [
+            'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60 * 24 * 7,
+            'throttle' => 60,
+        ],
     ],
 
     /*

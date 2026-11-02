@@ -8,6 +8,8 @@ use App\Http\Requests\RecordLeadDurationRequest;
 use App\Http\Resources\CustomerCallResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Lead;
+use App\Models\SubscriptionItem;
+use App\Models\Vendor;
 use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,11 +32,21 @@ class LeadController extends Controller
             return ApiResponse::error('NOT_FOUND', 'No customer profile exists for this account.', 404);
         }
 
+        // From the Feed there may be no service: use the vendor's own first.
+        $subcategoryId = $request->filled('subcategory_id')
+            ? $request->integer('subcategory_id')
+            : $this->firstServiceOf($request->integer('vendor_id'));
+
+        if ($subcategoryId === null) {
+            return ApiResponse::error('VALIDATION_FAILED', 'This vendor has no service to contact them about.', 422);
+        }
+
         $lead = Lead::create([
             'customer_id' => $customer->id,
             'vendor_id' => $request->integer('vendor_id'),
-            'subcategory_id' => $request->integer('subcategory_id'),
+            'subcategory_id' => $subcategoryId,
             'zone_id' => $request->filled('zone_id') ? $request->integer('zone_id') : null,
+            'promotion_id' => $request->filled('promotion_id') ? $request->integer('promotion_id') : null,
             'channel' => $request->string('channel')->toString(),
         ]);
 
@@ -110,5 +122,22 @@ class LeadController extends Controller
         $paginator->getCollection()->transform(fn (Lead $lead) => (new CustomerCallResource($lead))->resolve());
 
         return ApiResponse::paginated($paginator);
+    }
+
+    /** The first service on the vendor's live subscription, or null. */
+    private function firstServiceOf(int $vendorId): ?int
+    {
+        $subscription = Vendor::find($vendorId)?->currentActiveSubscription();
+
+        if ($subscription === null) {
+            return null;
+        }
+
+        $id = SubscriptionItem::where('subscription_id', $subscription->id)
+            ->where('item_type', 'subcategory')
+            ->orderBy('id')
+            ->value('item_id');
+
+        return $id === null ? null : (int) $id;
     }
 }

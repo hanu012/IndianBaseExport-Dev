@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\SalesmanCommissionTotals;
 use App\Models\Commission;
 use App\Models\Salesman;
 use Filament\Forms\Components\TextInput;
@@ -21,11 +20,9 @@ use Illuminate\Support\Number;
 /**
  * Commission & Payouts (SPEC section 5 item 9) — every commission
  * across every salesman, mark-as-paid with a captured payout
- * reference. A custom Page, not a Resource, so the per-salesman
- * totals widget above the table can render at all — Filament's stock
- * Resource List page has no header-widget slot (confirmed by reading
- * its own Blade view), same reasoning `LeadsAnalytics` is built this
- * way.
+ * reference. A custom Page, not a Resource. (The per-salesman totals
+ * widget that used to sit above the table was removed from the admin
+ * on 2026-11-01.)
  */
 class CommissionPayouts extends Page implements HasTable
 {
@@ -47,11 +44,6 @@ class CommissionPayouts extends Page implements HasTable
     public static function canAccess(): bool
     {
         return Auth::user()?->can('viewAny', Commission::class) ?? false;
-    }
-
-    protected function getHeaderWidgets(): array
-    {
-        return [SalesmanCommissionTotals::class];
     }
 
     public function table(Table $table): Table

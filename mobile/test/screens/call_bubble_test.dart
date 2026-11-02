@@ -57,9 +57,10 @@ class _FakeDataSource extends DataSource {
   @override
   Future<CommonResponse?> createLeadAPI({
     required int vendorId,
-    required int subcategoryId,
+    int? subcategoryId,
     int? zoneId,
     required String channel,
+    int? promotionId,
   }) async {
     leads++;
     return CommonResponse.fromJson({'success': true, 'data': {'id': 42}, 'error': null});

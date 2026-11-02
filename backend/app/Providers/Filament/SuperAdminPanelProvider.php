@@ -44,6 +44,10 @@ class SuperAdminPanelProvider extends PanelProvider
             ->path('super-admin')
             ->login()
             ->brandName('Service Marketplace · Super Admin')
+            // Same logo as /admin: dark text on light, white text on dark.
+            ->brandLogo(fn (): string => asset('images/logo.png'))
+            ->darkModeBrandLogo(fn (): string => asset('images/logo-dark.png'))
+            ->brandLogoHeight('3.25rem')
             ->defaultThemeMode(ThemeMode::Dark)
             ->colors([
                 'primary' => Color::Blue,
@@ -61,6 +65,8 @@ class SuperAdminPanelProvider extends PanelProvider
             ->renderHook(PanelsRenderHook::BODY_END, fn (): View => view('filament.hooks.credential-share'))
             // The record View pop-up's boxed tiles (App\Filament\Support\RecordView).
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.record-view-styles'))
+            // Browser-tab icons (public/favicons).
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.favicons'))
             ->discoverResources(in: app_path('Filament/SuperAdmin/Resources'), for: 'App\\Filament\\SuperAdmin\\Resources')
             ->discoverPages(in: app_path('Filament/SuperAdmin/Pages'), for: 'App\\Filament\\SuperAdmin\\Pages')
             ->pages([

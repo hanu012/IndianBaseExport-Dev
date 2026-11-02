@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Services\Firebase\FirebaseAuthClient;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -13,10 +12,14 @@ use Illuminate\Support\Facades\Log;
  * sign-in is on (AuthProvider); otherwise the temporary password flow is
  * untouched.
  *
- * It is Firebase's password-reset email, sent to an account that has never
- * had a password of its own. The link opens the same page as "Forgot
- * password?" (PasswordResetWebController), which saves the chosen password
- * in Firebase and here and clears must_change_password.
+ * It is OUR "set your password" email (PasswordResetService, the 7-day
+ * invite link — decided 2026-11-01), not Firebase's: Firebase only emails
+ * accounts it already holds, which meant creating a Firebase account for any
+ * address typed in, real or not. Now the Firebase account is created only
+ * when the person opens the link and sets a password
+ * (PasswordResetWebController → AuthProvider::pushPassword), so Firebase
+ * holds only people who proved the address is theirs. Needs working mail
+ * (MAIL_* — with MAIL_MAILER=log nothing is delivered).
  *
  * Only for accounts still on a password they did not choose
  * (must_change_password = true) — an account whose owner set their own
@@ -32,7 +35,7 @@ class AccountInviteService
 {
     public function __construct(
         private readonly AuthProvider $auth,
-        private readonly FirebaseAuthClient $firebase,
+        private readonly PasswordResetService $links,
     ) {}
 
     public function enabled(): bool
@@ -48,7 +51,7 @@ class AccountInviteService
     /**
      * Emails the link. Returns the address, masked for display
      * ("r***@gmail.com"), or null when no link went out — not enabled, not
-     * eligible, or Firebase failed (logged).
+     * eligible, or the email could not be sent (logged).
      */
     public function send(User $user): ?string
     {
@@ -57,9 +60,7 @@ class AccountInviteService
         }
 
         try {
-            $this->firebase->ensureActionUrl(route('password.firebase.show'));
-            $this->auth->ensureAccount($user);
-            $this->firebase->sendPasswordResetEmail($user->email);
+            $this->links->sendLink($user);
         } catch (\Throwable $e) {
             Log::error('Set-your-password email could not be sent', [
                 'user_id' => $user->getKey(),
