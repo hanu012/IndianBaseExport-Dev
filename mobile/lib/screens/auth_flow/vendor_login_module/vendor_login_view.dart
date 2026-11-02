@@ -20,6 +20,7 @@ class VendorLoginView extends StatelessWidget {
           subtitle: StringRes.vendorLoginDesc,
           formKey: controller.formKey,
           brandIcon: Icons.storefront_outlined,
+          brandImage: 'assets/images/splash/vendor.png',
           brandTitle: StringRes.vendorPortal,
           brandSubtitle: StringRes.vendorPortalDesc,
           showBack: false,

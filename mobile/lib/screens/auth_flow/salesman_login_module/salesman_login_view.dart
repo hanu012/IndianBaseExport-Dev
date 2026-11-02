@@ -31,6 +31,7 @@ class SalesmanLoginView extends StatelessWidget {
           // nothing behind it to return to.
           showBack: false,
           brandIcon: Icons.explore_outlined,
+          brandImage: 'assets/images/splash/salesman.png',
           brandTitle: StringRes.salesmanPortal,
           brandSubtitle: StringRes.salesmanPortalDesc,
           extras: AuthExtrasRow(

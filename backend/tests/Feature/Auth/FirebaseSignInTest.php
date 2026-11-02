@@ -640,6 +640,63 @@ class FirebaseSignInTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'ravi@example.com']);
     }
 
+    /** An app sign-up whose Firebase link lapsed unused is removed entirely (decided 2026-11-02). */
+    public function test_an_unconfirmed_app_sign_up_is_deleted_once_its_link_lapses(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase([
+            'identitytoolkit.googleapis.com/v1/projects/demo-project/accounts' => Http::response(['localId' => 'fb-typo']),
+        ]);
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Typo Person',
+            'email' => 'iam@example.com',
+            'role' => 'customer',
+        ])->assertCreated();
+
+        $user = User::where('email', 'iam@example.com')->sole();
+        $this->assertTrue($user->self_registered);
+
+        // Link still live: nothing touched.
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+        $this->assertDatabaseHas('users', ['email' => 'iam@example.com']);
+
+        $this->travel(2)->hours();
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['email' => 'iam@example.com']); // force-deleted, not trashed
+        $this->assertDatabaseCount('customers', 0);
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'accounts:delete') && $request['localId'] === 'fb-typo');
+
+        // The address is free again for a correct sign-up.
+        $this->postJson('/api/auth/register', [
+            'name' => 'Typo Person',
+            'email' => 'iam@example.com',
+            'role' => 'customer',
+        ])->assertCreated();
+    }
+
+    /** Admin-created accounts, and app sign-ups that did sign in, keep their row. */
+    public function test_the_job_never_deletes_admin_created_or_signed_in_accounts(): void
+    {
+        $this->useFirebase();
+        $this->fakeFirebase();
+
+        $adminMade = User::factory()->role(UserRole::Salesman)->create(['must_change_password' => true]);
+        $signedIn = User::factory()->role(UserRole::Customer)->create(['must_change_password' => true]);
+        $signedIn->forceFill(['self_registered' => true])->save();
+        $signedIn->createToken('phone');
+
+        foreach ([$adminMade, $signedIn] as $user) {
+            $user->forceFill(['invite_sent_at' => now()->subHours(3), 'invite_expires_at' => now()->subHours(2)])->save();
+        }
+
+        $this->artisan('accounts:expire-invites')->assertSuccessful();
+
+        $this->assertNotNull($adminMade->fresh());
+        $this->assertNotNull($signedIn->fresh());
+    }
+
     /** The clean-up never breaks a link that is still out. */
     public function test_the_daily_job_keeps_the_firebase_account_while_the_invite_is_live(): void
     {

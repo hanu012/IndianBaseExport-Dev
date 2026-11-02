@@ -21,8 +21,9 @@ Schedule::command('kyc:expire-documents')->daily();
 Schedule::command('promotions:process-expiry')->daily();
 
 // "Set your password" invites: Firebase accounts of anyone who never set a
-// password are removed (they are created only once one is set).
-Schedule::command('accounts:expire-invites')->daily();
+// password are removed, and app sign-ups whose link lapsed unused are deleted.
+// Hourly: a Firebase-sent link lasts an hour, so leftovers go the same day.
+Schedule::command('accounts:expire-invites')->hourly();
 
 // API error log rows older than ApiErrorLog::RETENTION_DAYS.
 Schedule::command('model:prune', ['--model' => [\App\Models\ApiErrorLog::class]])->daily();

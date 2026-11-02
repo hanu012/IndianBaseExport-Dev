@@ -175,6 +175,7 @@ class User extends Authenticatable implements FilamentUser
             'must_change_password' => 'boolean',
             'invite_sent_at' => 'datetime',
             'invite_expires_at' => 'datetime',
+            'self_registered' => 'boolean',
             'enable_notification' => 'boolean',
             // Two-step login (TwoFactorService). Encrypted at rest, and not
             // fillable — written only through forceFill there.

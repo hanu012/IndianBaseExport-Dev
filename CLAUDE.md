@@ -101,8 +101,12 @@ approvals.
   `users.invite_sent_at` / `invite_expires_at` (each link's own lifetime) +
   `User::inviteStatus()` give the "Password" column on Users / Admins
   (Invite sent / Invite expired / Not set); `accounts:expire-invites`
-  (daily) removes the Firebase twin of anyone who never set a password
-  once their invite has lapsed — never while a link is still out. Emails are also refused at entry when their domain
+  (hourly) removes the Firebase twin of anyone who never set a password
+  once their invite has lapsed — never while a link is still out — and
+  force-deletes app sign-ups (`users.self_registered`, set by
+  `auth/register` only) whose link lapsed unused and that never got a
+  token, with their vendor/customer row, freeing the address (decided
+  2026-11-02). Admin-created / salesman-sold rows are never deleted. Emails are also refused at entry when their domain
   cannot receive mail (`App\Rules\EmailDomainExists` — DNS MX/A, fails open
   on a DNS outage, off in tests via `EMAIL_DOMAIN_CHECK=false`). A mailbox at
   a real domain cannot be checked; only the link proves it.

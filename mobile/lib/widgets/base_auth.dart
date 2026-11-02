@@ -62,9 +62,14 @@ class AuthBrandHeader extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.image,
   });
 
   final IconData icon;
+
+  /// The app's own logo artwork (assets/images/splash). Shown instead of the
+  /// [icon] tile when given; [icon] is the fallback if it fails to load.
+  final String? image;
 
   /// Translation key.
   final String title;
@@ -82,26 +87,16 @@ class AuthBrandHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            height: 78.getSize,
-            width: 78.getSize,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [ColorRes.primaryColorLight, ColorRes.primaryColorDark],
-              ),
-              borderRadius: BorderRadius.circular(24.getSize),
-              boxShadow: [
-                BoxShadow(
-                  color: ColorRes.primaryColor.withValues(alpha: 0.45),
-                  blurRadius: 32.getSize,
-                  offset: Offset(0, 12.getSize),
-                ),
-              ],
-            ),
-            child: Icon(icon, size: 38.getSize, color: ColorRes.whiteColor),
-          ),
+          if (image != null)
+            Image.asset(
+              image!,
+              height: 120.getSize,
+              width: 120.getSize,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => _iconTile(),
+            )
+          else
+            _iconTile(),
           18.heightSpacer,
           BaseTextDMSans(
             text: title,
@@ -124,6 +119,29 @@ class AuthBrandHeader extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _iconTile() {
+    return Container(
+      height: 78.getSize,
+      width: 78.getSize,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [ColorRes.primaryColorLight, ColorRes.primaryColorDark],
+        ),
+        borderRadius: BorderRadius.circular(24.getSize),
+        boxShadow: [
+          BoxShadow(
+            color: ColorRes.primaryColor.withValues(alpha: 0.45),
+            blurRadius: 32.getSize,
+            offset: Offset(0, 12.getSize),
+          ),
+        ],
+      ),
+      child: Icon(icon, size: 38.getSize, color: ColorRes.whiteColor),
     );
   }
 }
@@ -292,6 +310,7 @@ class AuthScaffold extends StatelessWidget {
     this.onBack,
     this.footer,
     this.brandIcon,
+    this.brandImage,
     this.brandTitle,
     this.brandSubtitle,
     this.extras,
@@ -308,6 +327,9 @@ class AuthScaffold extends StatelessWidget {
   /// [brandTitle]) turns on the branded header; screens that omit it keep
   /// the plainer stacked layout.
   final IconData? brandIcon;
+
+  /// The app's logo artwork; replaces the [brandIcon] tile when given.
+  final String? brandImage;
 
   /// Translation key for the product name under the icon — "Salesman
   /// Portal". Each flavour passes its own, so the three apps share one
@@ -394,6 +416,7 @@ class AuthScaffold extends StatelessWidget {
                   if (brandTitle != null) ...[
                     AuthBrandHeader(
                       icon: brandIcon ?? Icons.storefront_outlined,
+                      image: brandImage,
                       title: brandTitle!,
                       subtitle: brandSubtitle,
                     ),
@@ -712,7 +735,9 @@ class AuthPrimaryButton extends StatelessWidget {
                 onTap: onPressed,
                 borderRadius: BorderRadius.circular(_AuthTokens.buttonRadius),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: _AuthTokens.buttonPadding),
+                  padding: EdgeInsets.symmetric(
+                    vertical: _AuthTokens.buttonPadding,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -823,7 +848,10 @@ class AuthTextLink extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8.getSize),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.getSize, vertical: 10.getSize),
+          padding: EdgeInsets.symmetric(
+            horizontal: 8.getSize,
+            vertical: 10.getSize,
+          ),
           child: BaseTextDMSans(
             text: labelKey,
             fontSize: 12,
@@ -868,10 +896,7 @@ class AuthGradientHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            ColorRes.primaryColor,
-            ColorRes.primaryColorDark,
-          ],
+          colors: [ColorRes.primaryColor, ColorRes.primaryColorDark],
         ),
       ),
       child: Stack(
@@ -914,7 +939,11 @@ class AuthGradientHero extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.16),
                           ),
                         ),
-                        child: Icon(icon, size: 21.getSize, color: Colors.white),
+                        child: Icon(
+                          icon,
+                          size: 21.getSize,
+                          color: Colors.white,
+                        ),
                       ),
                       const Spacer(),
                       ?trailing,

@@ -93,7 +93,9 @@ class AuthController extends Controller
         // Still on a password they did not choose until the link is used —
         // which is also what makes its page say "Set your password" rather
         // than "reset".
-        $user->forceFill(['must_change_password' => true])->saveQuietly();
+        // self_registered: if the link lapses unused, accounts:expire-invites
+        // removes the account — the address was never shown to be real.
+        $user->forceFill(['must_change_password' => true, 'self_registered' => true])->saveQuietly();
 
         if ($request->string('role')->toString() === 'vendor') {
             Vendor::create([
